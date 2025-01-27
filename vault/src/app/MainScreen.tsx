@@ -20,6 +20,7 @@ import {
   Image,
   TouchableOpacity,
   Button,
+  ActivityIndicator,
 } from 'react-native';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
@@ -48,6 +49,7 @@ const fileq = require('../images/qmark.png');
 const filec = require('../images/greencheck1.gif');
 const fileu = require('../images/unused.png');
 const filee = require('../images/exclamation.png');
+const filel = require('../images/loading.gif');
 var deviceId;
 var myLoc;
 getUniqueId().then(id => {
@@ -185,6 +187,10 @@ function MainScreen(): React.JSX.Element {
       console.log('Setting unused');
       status = -3;
       file = fileu;
+    } else if (results == 'loading') {
+      console.log('Setting loading');
+      status = -4;
+      file = filel;
     } else if (results == 'warning') {
       status = -2;
       file = filee;
@@ -213,6 +219,8 @@ function MainScreen(): React.JSX.Element {
     }
     var data;
     console.log('in getFd for index ', index, demo);
+    updateStatus(index, 'loading');
+
     let body = {
       phone: '' + gPhone,
       product: 'vault',
@@ -557,7 +565,13 @@ function MainScreen(): React.JSX.Element {
                   Results:
                   {'\n'}
                 </Text>
-                <Image source={tasks[state].icon} style={styles.icon}></Image>
+                {tasks[state].status == -4 ? (
+                  <View style={styles.icon}>
+                    <ActivityIndicator color={'blue'} size="large" />
+                  </View>
+                ) : (
+                  <Image source={tasks[state].icon} style={styles.icon}></Image>
+                )}
                 <Text
                   style={[
                     styles.text,
