@@ -1,0 +1,28 @@
+project:
+  name: vault
+instance:
+  name: vault
+  runtime: nodejs22
+  region: aws.use1
+  application-id: ef095872-8338-4e52-80de-70c8b5f6c490
+  environment:
+    - name: vidstoken
+      value: xxxx
+    - name: baseurl
+      value: xxxx
+    - name: sb_key
+      value: xxxx
+    - name: sb_application
+      value: xxxx-xxxx-xxxx
+    - name: sb_secret
+      value: xxxx
+  entrypoint:
+    - node
+    - vault.js
+debug:
+  name: vault
+  application-id: ef095872-8338-4e52-80de-70c8b5f6c490
+  entrypoint:
+    - nodemon
+    - --inspect
+    - vault.js
