@@ -21,6 +21,7 @@ import {
   TouchableOpacity,
   Button,
   ActivityIndicator,
+  NativeModules,
 } from 'react-native';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
@@ -35,6 +36,7 @@ import {WebView} from 'react-native-webview';
 import Modal from 'react-native-modal';
 import dgram from 'react-native-udp';
 import GetLocation from 'react-native-get-location';
+const {VonageVerifySilentAuthModule} = NativeModules;
 
 var phone = '14083753079';
 var started = null;
@@ -242,6 +244,19 @@ function MainScreen(): React.JSX.Element {
       console.log('resp back in getFd index ', index);
       data = await resp.json();
       console.log('Response from getFd: ', data);
+      if (data.redirect) {
+        console.log('Ok, doing redirection to ', data.redirect);
+        try {
+          const jopenCheckResponse =
+            await VonageVerifySilentAuthModule.openWithDataCellular(
+              data.redirect,
+              true,
+            );
+          console.log('Redirect response: ', jopenCheckResponse);
+        } catch (err) {
+          console.log('Redirection error: ', err);
+        }
+      }
       if (data.results) {
         updateStatus(index, data.results, data.results);
       }
