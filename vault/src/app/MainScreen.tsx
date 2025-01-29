@@ -278,7 +278,12 @@ function MainScreen(): React.JSX.Element {
             openCheckResponse.response_body !== null
           ) {
             // Must be NV
-            updateStatus(index, 'allow', 'Number verified');
+            console.log('NV Response body: ', openCheckResponse.response_body);
+            if (openCheckResponse.response_body.results) {
+              updateStatus(index, 'allow', 'Number verified');
+            } else {
+              updateStatus(index, 'block', 'Invalid number');
+            }
           }
         } catch (err) {
           updateStatus(index, 'block', 'Unable to verify number');

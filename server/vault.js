@@ -10,10 +10,6 @@ import fs from 'fs';
 import qs from 'qs';
 
 const udpserver = dgram.createSocket('udp4');
-var sb_key = process.env.sb_key;
-var sb_application = process.env.sb_application;
-var sb_keyfile = 'key.file'
-var sb_secret = process.envsb_secret;
 const v2url = "https://api.nexmo.com/v2/verify/";
 
 udpserver.on('message', (msg, rinfo) => {
