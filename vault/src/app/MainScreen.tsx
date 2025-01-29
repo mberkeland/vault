@@ -189,8 +189,8 @@ function MainScreen(): React.JSX.Element {
       console.log('Setting unused');
       status = -3;
       file = fileu;
-    } else if (results == 'loading') {
-      console.log('Setting loading');
+    } else if (results == 'checking') {
+      console.log('Setting checking');
       status = -4;
       file = filel;
     } else if (results == 'warning') {
@@ -213,6 +213,15 @@ function MainScreen(): React.JSX.Element {
     });
     setTasks(newTasks);
   }
+  async function sendCode(code, reqId) {
+    const resp = fetch(vUrl + '/checkcode', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({code: code, reqId: reqId}),
+    });
+  }
   async function getFd(index) {
     if (index == null || !tasks[index].active) {
       console.log('Not using ', index);
@@ -221,7 +230,7 @@ function MainScreen(): React.JSX.Element {
     }
     var data;
     console.log('in getFd for index ', index, demo);
-    updateStatus(index, 'loading');
+    updateStatus(index, 'checking');
 
     let body = {
       phone: '' + gPhone,
@@ -234,6 +243,9 @@ function MainScreen(): React.JSX.Element {
       body.location = myLoc;
     }
     if (!demo) {
+      if (sandbox && tasks[index].tag == 'nv') {
+        body.phone = '990' + gPhone.substring(gPhone.length - 10);
+      }
       const resp = await fetch(vUrl + tasks[index].url, {
         method: 'POST',
         headers: {
@@ -245,6 +257,7 @@ function MainScreen(): React.JSX.Element {
       data = await resp.json();
       console.log('Response from getFd: ', data);
       if (data.redirect) {
+        var reqId = data.reqid;
         console.log('Ok, doing redirection to ', data.redirect);
         try {
           const jopenCheckResponse =
@@ -252,10 +265,26 @@ function MainScreen(): React.JSX.Element {
               data.redirect,
               true,
             );
-          console.log('Redirect response: ', jopenCheckResponse);
+          const openCheckResponse = JSON.parse(jopenCheckResponse);
+          console.log('Redirect response: ', openCheckResponse);
+          if (openCheckResponse.http_status > 299) {
+            updateStatus(index, 'block', 'Invalid number');
+          } else if (openCheckResponse.response_body?.code) {
+            // Must be SA
+            updateStatus(index, 'allow', 'Number verified');
+            sendCode(openCheckResponse.response_body.code, reqId);
+          } else if (
+            typeof openCheckResponse.response_body === 'object' &&
+            openCheckResponse.response_body !== null
+          ) {
+            // Must be NV
+            updateStatus(index, 'allow', 'Number verified');
+          }
         } catch (err) {
+          updateStatus(index, 'block', 'Unable to verify number');
           console.log('Redirection error: ', err);
         }
+        return;
       }
       if (data.results) {
         updateStatus(index, data.results, data.results);
@@ -389,8 +418,10 @@ function MainScreen(): React.JSX.Element {
     const phoneNumber = parsePhoneNumber(inputNumber, countryCode);
     console.log('Validating: ', inputNumber, countryCode, phoneNumber);
     if (phoneNumber?.isValid()) {
-      console.log('Setting validation true and writing: ', phoneNumber.number);
-      AsyncStorage.setItem('@phone', phoneNumber.number);
+      var number = phoneNumber.number.replace(/\D/g, '');
+      gPhone = number;
+      console.log('Setting validation true and writing: ', number);
+      AsyncStorage.setItem('@phone', number);
       setIsPhoneNumberValidState(true);
     } else {
       console.log('Setting validation false');
