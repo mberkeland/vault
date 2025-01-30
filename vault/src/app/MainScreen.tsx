@@ -416,14 +416,40 @@ function MainScreen(): React.JSX.Element {
   ];
   var copyTasks = [...defaultTasks];
   const [tasks, setTasks] = useState(copyTasks);
-  useEffect(() => {}, []);
+  useEffect(() => {
+    async function fetchSettings() {
+      var val;
+      val = await AsyncStorage.getItem('fast');
+      if (val == 'true') {
+        // Default is false, so only change if we read true
+        setFast(true);
+      }
+      val = await AsyncStorage.getItem('demo');
+      if (val == 'true') {
+        setDemo(true);
+      }
+      val = await AsyncStorage.getItem('sandbox');
+      if (val === 'true') {
+        setSandbox(true);
+      }
+      tasks.map(async task => {
+        val = await AsyncStorage.getItem(task.tag);
+        if (val === 'false') {
+          // Default is true, so only change if we read false
+          console.log('Setting to false: ', task.tag, typeof val);
+          task.active = false;
+        }
+      });
+    }
+    fetchSettings();
+  }, []);
   useEffect(() => {
     console.log('In useEffect for number stuff: ', inputNumber, countryCode);
     if (!inputNumber || !countryCode) return;
     const phoneNumber = parsePhoneNumber(inputNumber, countryCode);
     console.log('Validating: ', inputNumber, countryCode, phoneNumber);
     if (phoneNumber?.isValid()) {
-      var number = phoneNumber.number.replace(/\D/g, '');
+      var number = phoneNumber.number; //.replace(/\D/g, '');
       gPhone = number;
       console.log('Setting validation true and writing: ', number);
       AsyncStorage.setItem('@phone', number);
@@ -441,6 +467,7 @@ function MainScreen(): React.JSX.Element {
     setInProcess(false);
     setFacial(false);
   }, [done]);
+
   useEffect(() => {
     console.log('useEffect for state: ', state);
     if (state == null || !tasks[state]) {
@@ -463,6 +490,17 @@ function MainScreen(): React.JSX.Element {
       tasks[state].icon = fileu;
     }
   }, [state]);
+  const saveSettings = () => {
+    setSettings(false);
+    console.log('Writing settings to storage: ');
+    AsyncStorage.setItem('fast', '' + fast);
+    AsyncStorage.setItem('demo', '' + demo);
+    AsyncStorage.setItem('sandbox', '' + sandbox);
+    tasks.map(task => {
+      console.log('Setting: ', task.tag, task.active);
+      AsyncStorage.setItem(task.tag, '' + task.active);
+    });
+  };
 
   const sendUDP = async () => {
     console.log('Creating UDP socket');
@@ -562,6 +600,7 @@ function MainScreen(): React.JSX.Element {
     setDone(false);
     setPopup(false);
     preFacial = false;
+    //await AsyncStorage.clear();
   };
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -765,7 +804,7 @@ function MainScreen(): React.JSX.Element {
                 <Button
                   title="Done"
                   onPress={() => {
-                    setSettings(false);
+                    saveSettings();
                   }}
                 />
               </View>
