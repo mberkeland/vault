@@ -127,4 +127,26 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
     marginRight: 20,
   },
+  video: {
+    width: '100%',
+    height: 200,
+  },
+  overlay: {
+    flex: 1,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    opacity: 0.1,
+    backgroundColor: 'green',
+    width: '100%',
+  },
+  modalContainer: {
+    flex: 1,
+    left: -20,
+    width: '120%',
+    top: 180,
+    backgroundColor: 'rgba(0, 255, 0, 0.2)', // Semi-opaque background
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

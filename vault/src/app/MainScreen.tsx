@@ -19,6 +19,7 @@ import {
   Pressable,
   Image,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Button,
   ActivityIndicator,
   NativeModules,
@@ -36,6 +37,8 @@ import {WebView} from 'react-native-webview';
 import Modal from 'react-native-modal';
 import dgram from 'react-native-udp';
 import GetLocation from 'react-native-get-location';
+import Video from 'react-native-video';
+import vvideo from '../images/vault.mp4';
 const {VonageVerifySilentAuthModule} = NativeModules;
 
 var phone = '14083753079';
@@ -126,7 +129,8 @@ function MainScreen(): React.JSX.Element {
   const isDarkMode = false; //useColorScheme() === 'dark';
 
   const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+    backgroundColor: showVideo ? 'ligthgreen' : Colors.lighter,
+    //    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
@@ -141,6 +145,8 @@ function MainScreen(): React.JSX.Element {
   const [popup, setPopup] = useState(false);
   const [state, alterState] = useState(null);
   const [done, setDone] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
+
   var preFacial = false;
 
   var delay = 1000;
@@ -286,7 +292,7 @@ function MainScreen(): React.JSX.Element {
             }
           }
         } catch (err) {
-          updateStatus(index, 'block', 'Unable to verify number');
+          updateStatus(index, 'block', 'Unable to verify');
           console.log('Redirection error: ', err);
         }
         return;
@@ -463,9 +469,12 @@ function MainScreen(): React.JSX.Element {
     if (!done) {
       return;
     }
+    console.log('Done set to true');
     sendUDP();
     setInProcess(false);
     setFacial(false);
+    setShowVideo(true);
+    console.log('Show Video set to true');
   }, [done]);
 
   useEffect(() => {
@@ -539,12 +548,15 @@ function MainScreen(): React.JSX.Element {
     reset();
     setInProcess(true);
     console.log('After Dialog');
+    var skip = false;
     if (fast) {
       console.log('Starting fast loop');
       for (let step = 0; step < tasks.length; step++) {
         console.log('Loop value: ', step);
         if (tasks[step].tag == 'facial') {
           if (tasks[step].active) {
+            console.log('Facial in fast loop');
+            skip = true;
             setFacial(true);
           } else {
             updateStatus(step, 'unused');
@@ -555,8 +567,10 @@ function MainScreen(): React.JSX.Element {
           await getFd(step);
         }
       }
-      //      sendUDP();
-      //      setInProcess(false);
+      if (!skip) {
+        console.log('Setting done in fast mode');
+        setDone(true);
+      }
     } else {
       alterState(0);
     }
@@ -585,6 +599,7 @@ function MainScreen(): React.JSX.Element {
       updateStatus(step, 'allow', 'Liveness score:\n' + res[2] + '/100');
     }
     alterState(step + 1);
+    console.log('About to set done to true');
     setDone(true);
   };
   const reset = async () => {
@@ -595,11 +610,13 @@ function MainScreen(): React.JSX.Element {
       return c;
     });
     setTasks(newTasks);
+    setShowVideo(false);
     setInProcess(false);
     setFacial(false);
     setDone(false);
     setPopup(false);
     preFacial = false;
+
     //await AsyncStorage.clear();
   };
   return (
@@ -612,7 +629,10 @@ function MainScreen(): React.JSX.Element {
       )}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        style={[backgroundStyle, {height: '100%'}]}>
+        style={[
+          {backgroundColor: showVideo ? '#ECFFDC' : Colors.lighter},
+          {height: '100%'},
+        ]}>
         {facial && (
           <View>
             <Modal isVisible={facial}>
@@ -811,8 +831,7 @@ function MainScreen(): React.JSX.Element {
             </Modal>
           </View>
         )}
-        <Header />
-        {countryCode && (
+        {showVideo ? (
           <View
             style={[
               styles.container,
@@ -820,38 +839,64 @@ function MainScreen(): React.JSX.Element {
                 backgroundColor: isDarkMode ? Colors.black : '',
               },
             ]}>
-            <PhoneInput
-              containerStyle={styles.phone}
-              defaultValue={inputNumber} //defaultNumber}
-              defaultCode={countryCode} //global.myCountry}
-              textInputProps={{returnKeyType: 'done'}}
-              onChangeText={text => {
-                console.log('onChangeText: ', text);
-                setInputNumber(text);
-              }}
-              onChangeFormattedText={text => {
-                //console.log("onChangeFormattedText: ", text)
-                //setInputNumber(text);
-              }}
-              onChangeCountry={text => {
-                setCountryCode(text.cca2);
-              }}
-              withDarkTheme
-              withShadow
+            <Video
+              source={vvideo}
+              paused={false}
+              style={styles.video}
+              repeat={false}
             />
-            <TouchableOpacity
-              onPress={loginHandler}
-              style={[
-                styles.button,
-                isPhoneNumberValidState && !inProcess
-                  ? styles.enabledButton
-                  : styles.disabledButton,
-              ]}
-              disabled={!isPhoneNumberValidState}>
-              <Text style={styles.buttonText}>Enter the Vault</Text>
-            </TouchableOpacity>
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.container,
+              {
+                backgroundColor: isDarkMode ? Colors.black : '',
+              },
+            ]}>
+            <Header />
+            {countryCode && (
+              <PhoneInput
+                containerStyle={styles.phone}
+                defaultValue={inputNumber} //defaultNumber}
+                defaultCode={countryCode} //global.myCountry}
+                textInputProps={{returnKeyType: 'done'}}
+                onChangeText={text => {
+                  console.log('onChangeText: ', text);
+                  setInputNumber(text);
+                }}
+                onChangeFormattedText={text => {
+                  //console.log("onChangeFormattedText: ", text)
+                  //setInputNumber(text);
+                }}
+                onChangeCountry={text => {
+                  setCountryCode(text.cca2);
+                }}
+                withDarkTheme
+                withShadow
+              />
+            )}
           </View>
         )}
+        <View
+          style={[
+            styles.container,
+            {
+              backgroundColor: isDarkMode ? Colors.black : '',
+            },
+          ]}>
+          <TouchableOpacity
+            onPress={loginHandler}
+            style={[
+              styles.button,
+              isPhoneNumberValidState && !inProcess
+                ? styles.enabledButton
+                : styles.disabledButton,
+            ]}
+            disabled={!isPhoneNumberValidState}>
+            <Text style={styles.buttonText}>Enter the Vault</Text>
+          </TouchableOpacity>
+        </View>
         <View
           style={[
             styles.citem,
@@ -894,6 +939,17 @@ function MainScreen(): React.JSX.Element {
               source={require('../images/settings.png')}></Image>
           </TouchableOpacity>
         </View>
+        {0 && showVideo && (
+          <TouchableWithoutFeedback
+            onPress={() => {
+              console.log('Got touch!!!!');
+              setShowVideo(false);
+            }}>
+            <Modal transparent={true} visible={true}>
+              <View style={styles.modalContainer}></View>
+            </Modal>
+          </TouchableWithoutFeedback>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
