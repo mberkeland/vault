@@ -598,7 +598,6 @@ function MainScreen(): React.JSX.Element {
       // Good face
       updateStatus(step, 'allow', 'Liveness score:\n' + res[2] + '/100');
     }
-    alterState(step + 1);
     console.log('About to set done to true');
     setDone(true);
   };
