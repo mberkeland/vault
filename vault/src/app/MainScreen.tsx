@@ -4,6 +4,7 @@
  *
  * @format
  */
+const ver = '1.01';
 
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
@@ -39,6 +40,7 @@ import dgram from 'react-native-udp';
 import GetLocation from 'react-native-get-location';
 import Video from 'react-native-video';
 import vvideo from '../images/vault.mp4';
+import rvideo from '../images/tluav.mp4';
 const {VonageVerifySilentAuthModule} = NativeModules;
 
 var phone = '14083753079';
@@ -49,6 +51,8 @@ var phase = 0;
 var faceUrl = 'https://main.d3sn8is0cbxe5o.amplifyapp.com';
 var udpUrl = vUrl;
 var udpPort = 41234;
+var bcolor = '#ECFFDC'
+var endVideo = vvideo;
 const filex = require('../images/redx2.gif');
 const fileq = require('../images/qmark.png');
 const filec = require('../images/greencheck1.gif');
@@ -104,6 +108,15 @@ const Header = (): Node => {
         {'\n'}
         Vault
       </Text>
+      <Text
+        style={[
+          styles.ver,
+          {
+            color: isDarkMode ? Colors.white : Colors.black,
+          },
+        ]}>
+        v{ver}
+      </Text>
     </ImageBackground>
   );
 };
@@ -129,8 +142,8 @@ function MainScreen(): React.JSX.Element {
   const isDarkMode = false; //useColorScheme() === 'dark';
 
   const backgroundStyle = {
-    backgroundColor: showVideo ? 'ligthgreen' : Colors.lighter,
-    //    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+    backgroundColor: showVideo ? 'lightgreen' : Colors.lighter,
+    //    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter, lightgreen
   };
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
@@ -473,14 +486,21 @@ function MainScreen(): React.JSX.Element {
     sendUDP();
     setInProcess(false);
     setFacial(false);
+    //bcolor ='rgba( 255, 0, 0, 0.4)'; // Failure
+    bcolor = '#ECFFDC'  // Good
     setShowVideo(true);
     console.log('Show Video set to true');
   }, [done]);
 
   useEffect(() => {
-    console.log('useEffect for state: ', state);
+    console.log('useEffect for state: ', state, tasks.length);
     if (state == null || !tasks[state]) {
+      console.log('Invalid state');
       setInProcess(false);
+      if (state == tasks.length && !tasks[state - 1].active) {
+        console.log('Last state, unused... close it out');
+        setDone(true);
+      }
       return;
     }
     async function fetchData(state) {
@@ -497,6 +517,7 @@ function MainScreen(): React.JSX.Element {
       }
     } else {
       tasks[state].icon = fileu;
+      console.log('State, active: ', state, tasks[state].active);
     }
   }, [state]);
   const saveSettings = () => {
@@ -630,7 +651,7 @@ function MainScreen(): React.JSX.Element {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={[
-          {backgroundColor: showVideo ? '#ECFFDC' : Colors.lighter},
+          {backgroundColor: showVideo ? bcolor : Colors.lighter}, //#ECFFDC
           {height: '100%'},
         ]}>
         {facial && (
@@ -840,7 +861,7 @@ function MainScreen(): React.JSX.Element {
               },
             ]}>
             <Video
-              source={vvideo}
+              source={endVideo}
               paused={false}
               style={styles.video}
               repeat={false}
@@ -939,17 +960,6 @@ function MainScreen(): React.JSX.Element {
               source={require('../images/settings.png')}></Image>
           </TouchableOpacity>
         </View>
-        {0 && showVideo && (
-          <TouchableWithoutFeedback
-            onPress={() => {
-              console.log('Got touch!!!!');
-              setShowVideo(false);
-            }}>
-            <Modal transparent={true} visible={true}>
-              <View style={styles.modalContainer}></View>
-            </Modal>
-          </TouchableWithoutFeedback>
-        )}
       </ScrollView>
     </SafeAreaView>
   );

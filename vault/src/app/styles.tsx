@@ -129,7 +129,7 @@ export const styles = StyleSheet.create({
   },
   video: {
     width: '100%',
-    height: 200,
+    height: 228,
   },
   overlay: {
     flex: 1,
@@ -145,8 +145,12 @@ export const styles = StyleSheet.create({
     left: -20,
     width: '120%',
     top: 180,
-    backgroundColor: 'rgba(0, 255, 0, 0.2)', // Semi-opaque background
+    backgroundColor: 'rgba( 255, 0, 0, 0.2)', //'rgba(0, 255, 0, 0.2)', // Semi-opaque background
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  ver: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
