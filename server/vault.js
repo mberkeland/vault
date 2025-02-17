@@ -173,7 +173,7 @@ async function startup() {
   console.log("****************************** TEF Location") 
   var lat = 40.44509;
   var long =  -3.6939;
-  await doTef(tef_phone, lat, long );
+  //await doTef(tef_phone, lat, long );
 }
 app.post("/verifystatus", (req, res) => {
   console.log("Got Verify status!!!!", req.body);
@@ -417,6 +417,8 @@ app.post("/getLocation", async (req, res) => {
     if(!phone.startsWith("+")) phone = "+"+phone;
     var lat = 40.44509;
     var long =  -3.6939;
+    if(req.body.location?.latitude) lat = req.body.location.latitude
+    if(req.body.location?.longitude) long = req.body.location.longitude
         var tef =   await doTef(phone, lat, long );
         if(! tef || tef == 'NOT_FOUND') {
             results= 'block'
@@ -560,7 +562,7 @@ async function tefAccess(reqId) {
 
       },
     });
-    console.log("tefAccess results: ", results.data);
+    console.log("tefAccess results: ", results.data.expires_in);
     return results.data.access_token;
   } catch (err) {
     console.log("tefAccess error: ", err.response?.data);
@@ -576,6 +578,7 @@ async function tefLocation(token, phone, lat, long) {
     longitude: parseFloat(long),
     accuracy: 2,
   };
+  console.log("Tef Location body: ",body)
   try {
     var results = await axios.post(url, body, {
       headers: {

@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '1.01';
+const ver = '1.02';
 
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
@@ -65,17 +65,6 @@ getUniqueId().then(id => {
   deviceId = id;
   console.log('Initialized deviceId: ', deviceId);
 });
-try {
-  GetLocation.getCurrentPosition({
-    enableHighAccuracy: true,
-    timeout: 2000,
-  }).then(loc => {
-    myLoc = loc;
-    console.log('Got location: ', myLoc);
-  });
-} catch (err) {
-  console.log('Problem getting location');
-}
 
 type SectionProps = PropsWithChildren<{
   title: string;
@@ -259,6 +248,7 @@ function MainScreen(): React.JSX.Element {
       demo: demo,
     };
     if (tasks[index].tag == 'location') {
+      console.log("Adding location to request body: ",myLoc)
       body.location = myLoc;
     }
     if (!demo) {
@@ -459,6 +449,18 @@ function MainScreen(): React.JSX.Element {
           task.active = false;
         }
       });
+      try {
+        await GetLocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 4000,
+        }).then(loc => {
+          myLoc = loc;
+          console.log('Got location: ', myLoc);
+        });
+      } catch (err) {
+        console.log('Problem getting location: ',err);
+      }
+      
     }
     fetchSettings();
   }, []);
@@ -798,6 +800,9 @@ function MainScreen(): React.JSX.Element {
                 }}
                 onPress={(isChecked: boolean) => {
                   setDemo(isChecked);
+                  if(isChecked) {
+                    setSandbox(false)
+                  }
                 }}
               />
               <BouncyCheckbox
@@ -818,6 +823,9 @@ function MainScreen(): React.JSX.Element {
                 }}
                 onPress={(isChecked: boolean) => {
                   setSandbox(isChecked);
+                  if(isChecked) {
+                    setDemo(false)
+                  }
                 }}
               />
               {tasks.map(task => {
