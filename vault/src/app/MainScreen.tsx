@@ -51,7 +51,7 @@ var phase = 0;
 var faceUrl = 'https://main.d3sn8is0cbxe5o.amplifyapp.com';
 var udpUrl = vUrl;
 var udpPort = 41234;
-var bcolor = '#ECFFDC'
+var bcolor = '#ECFFDC';
 var endVideo = vvideo;
 const filex = require('../images/redx2.gif');
 const fileq = require('../images/qmark.png');
@@ -61,6 +61,8 @@ const filee = require('../images/exclamation.png');
 const filel = require('../images/loading.gif');
 var deviceId;
 var myLoc;
+var bedrock =
+  'Warning!\n\nDue to unacceptable authorization checks, this transaction will not proceed.';
 getUniqueId().then(id => {
   deviceId = id;
   console.log('Initialized deviceId: ', deviceId);
@@ -148,6 +150,30 @@ function MainScreen(): React.JSX.Element {
   const [state, alterState] = useState(null);
   const [done, setDone] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const [warning, setWarning] = useState(false);
+
+  // the required distance between touchStart and touchEnd to be detected as a swipe
+  const minSwipeDistance = 265;
+
+  const onTouchStart = e => {
+    console.log('start: ', e.nativeEvent.locationX, e.nativeEvent.locationY);
+    setTouchEnd(null); // otherwise the swipe is fired even with usual touch events
+    setTouchStart(e.nativeEvent.locationX);
+  };
+  const onTouchMove = e => setTouchEnd(e.nativeEvent.locationX);
+  const onTouchEnd = () => {
+    console.log('end: ', touchStart, touchEnd);
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    if (isLeftSwipe) {
+      console.log('swipe left: ', distance);
+      setWarning(true);
+      // add your conditional logic here
+    }
+  };
 
   var preFacial = false;
 
@@ -248,7 +274,7 @@ function MainScreen(): React.JSX.Element {
       demo: demo,
     };
     if (tasks[index].tag == 'location') {
-      console.log("Adding location to request body: ",myLoc)
+      console.log('Adding location to request body: ', myLoc);
       body.location = myLoc;
     }
     if (!demo) {
@@ -458,9 +484,8 @@ function MainScreen(): React.JSX.Element {
           console.log('Got location: ', myLoc);
         });
       } catch (err) {
-        console.log('Problem getting location: ',err);
+        console.log('Problem getting location: ', err);
       }
-      
     }
     fetchSettings();
   }, []);
@@ -489,7 +514,7 @@ function MainScreen(): React.JSX.Element {
     setInProcess(false);
     setFacial(false);
     //bcolor ='rgba( 255, 0, 0, 0.4)'; // Failure
-    bcolor = '#ECFFDC'  // Good
+    bcolor = '#ECFFDC'; // Good
     setShowVideo(true);
     console.log('Show Video set to true');
   }, [done]);
@@ -637,6 +662,7 @@ function MainScreen(): React.JSX.Element {
     setFacial(false);
     setDone(false);
     setPopup(false);
+    setWarning(false);
     preFacial = false;
 
     //await AsyncStorage.clear();
@@ -665,6 +691,36 @@ function MainScreen(): React.JSX.Element {
                 source={{uri: faceUrl}}
                 onMessage={onMessage}
               />
+            </Modal>
+          </View>
+        )}
+        {warning && (
+          <View
+            onTouchStart={() => {
+              setWarning(false);
+            }}>
+            <Modal
+              style={[styles.settings, {backgroundColor: 'red'}]}
+              isVisible={warning}>
+              <Text
+                style={[
+                  styles.text,
+                  {
+                    color: 'white',
+                  },
+                ]}>
+                {bedrock}
+              </Text>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    color: 'yellow',
+                    marginTop: 70,
+                  },
+                ]}>
+                Touch anywhere to dismiss
+              </Text>
             </Modal>
           </View>
         )}
@@ -800,8 +856,8 @@ function MainScreen(): React.JSX.Element {
                 }}
                 onPress={(isChecked: boolean) => {
                   setDemo(isChecked);
-                  if(isChecked) {
-                    setSandbox(false)
+                  if (isChecked) {
+                    setSandbox(false);
                   }
                 }}
               />
@@ -823,8 +879,8 @@ function MainScreen(): React.JSX.Element {
                 }}
                 onPress={(isChecked: boolean) => {
                   setSandbox(isChecked);
-                  if(isChecked) {
-                    setDemo(false)
+                  if (isChecked) {
+                    setDemo(false);
                   }
                 }}
               />
@@ -926,6 +982,9 @@ function MainScreen(): React.JSX.Element {
           </TouchableOpacity>
         </View>
         <View
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
           style={[
             styles.citem,
             {
