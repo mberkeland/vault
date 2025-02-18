@@ -112,7 +112,7 @@ async function getSB(id) {
 
 async function startup() {
   utils.getNexmo(vid).then((result) => {
-    console.log("Creating Silent user record for " + vid);
+    console.log("Creating SilentAuth user record for " + vid,result.key);
     users[vid] = result;
     users[vid].id = vid;
     users[vid].request_id = null;
@@ -156,7 +156,7 @@ async function startup() {
       .catch((err) => console.error(err));
   });
   utils.getNexmo(sid).then((result) => {
-    console.log("Creating Silent user record for " + sid);
+    console.log("Creating SIMSwap/Sandbox user record for " + sid,result.key);
     users[sid] = result;
     users[sid].id = vid;
     users[sid].request_id = null;
@@ -380,8 +380,8 @@ app.post("/getNv", async (req, res) => {
   let type = "sa";
   let sandbox = false;
   if (
-    phone.startsWith("49") ||
-    phone.startsWith("34") ||
+//    phone.startsWith("49") ||
+//    phone.startsWith("34") ||
     phone.startsWith("990")
   ) {
     type = "nv";
@@ -498,7 +498,7 @@ async function createCamara(phoneNumber, uuid, sandbox = false) {
     console.log("Setting Sandbox into Redirection, app=" + app);
   }
   let camara = encodeURI("https://oidc.idp.vonage.com/oauth2/auth");
-  camara += "?client_id=" + app; //f5daaf58-d4fa-4482-bc63-ac145dfec818';
+  camara += "?client_id=" + app; 
   camara += "&redirect_uri=" + server_url + "/nverify";
   //    camara += '&redirect_uri=' + 'https://vids.vonage.com/vfraud' + '/nverify';
   camara += "&response_type=code";
@@ -685,7 +685,6 @@ app.all("/nverify", async (req, res) => {
   }
   if (!phone) phone = "34665609431";
   try {
-    //let jwt = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3MDY5MDA4MjAsImV4cCI6MTczODQzNjgyMCwianRpIjoiWDdkZVNLMWN6bzFTIiwiYXBwbGljYXRpb25faWQiOiJmNWRhYWY1OC1kNGZhLTQ0ODItYmM2My1hYzE0NWRmZWM4MTgiLCJzdWIiOiIiLCJhY2wiOiIifQ.W65UtrVFlpmWp_aMAjomb0ZJnnpuGl9CJpF1D47IrET7ELy1mdnb46ljSqYP55IMblekgMSjLJ0otwzZOBaBtXXsRA4FTbd1fcl_W2EAjs27RRqGtxy0upYmbFu3eS9cpxhK85Rxz8umnZgviwF_U781XbMWcNZiAyN37bAYNFUpgt1ZnsKv-xkqyxzvV82HFO-3b-Nq-7CNdx6sX9lS5gVLMUIW6eEcOLMs3PBB2B3biq6FMMrqY7Dl-q-qZq2G-NcPFOwpTtbTkQrlcwzn4Ki1ab57RjJJBf5kpKNWmgQftFEWR7arFH8n0aSvERQ27a-f9QyxuF7bqomEBdRjPg';
     let jwt = tokenGenerate(users[id].app_id, users[id].keyfile, {});
     let app = users[id].app_id;
     let code = req.query.code;
@@ -695,7 +694,7 @@ app.all("/nverify", async (req, res) => {
         grant_type: "authorization_code",
         redirect_uri: server_url + "/nverify",
         code: code,
-        client_id: app, //'f5daaf58-d4fa-4482-bc63-ac145dfec818',
+        client_id: app, 
       }),
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",

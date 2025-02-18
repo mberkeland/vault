@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '1.02';
+const ver = '1.03';
 
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
@@ -24,6 +24,7 @@ import {
   Button,
   ActivityIndicator,
   NativeModules,
+  Dimensions,
 } from 'react-native';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
@@ -158,15 +159,17 @@ function MainScreen(): React.JSX.Element {
   const minSwipeDistance = 265;
 
   const onTouchStart = e => {
-    console.log('start: ', e.nativeEvent.locationX, e.nativeEvent.locationY);
-    setTouchEnd(null); // otherwise the swipe is fired even with usual touch events
+    e.preventDefault();
+    console.log('start: ', e.nativeEvent.locationX, Dimensions.get('window').width);
+    //setTouchEnd(null); // otherwise the swipe is fired even with usual touch events
     setTouchStart(e.nativeEvent.locationX);
   };
   const onTouchMove = e => setTouchEnd(e.nativeEvent.locationX);
-  const onTouchEnd = () => {
-    console.log('end: ', touchStart, touchEnd);
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
+  const onTouchEnd = (e) => {
+    var end = e.nativeEvent.locationX;
+    console.log('onTouchEnd: ', touchStart, end);
+    if (!touchStart ) return;
+    const distance = touchStart - end;
     const isLeftSwipe = distance > minSwipeDistance;
     if (isLeftSwipe) {
       console.log('swipe left: ', distance);
@@ -560,7 +563,7 @@ function MainScreen(): React.JSX.Element {
   };
 
   const sendUDP = async () => {
-    console.log('Creating UDP socket');
+    console.log('Creating UDP socket, sending to ',udpUrl,udpPort);
     const socket = dgram.createSocket({type: 'udp4', debug: true});
     socket.bind();
     socket.once('listening', function () {
@@ -702,6 +705,12 @@ function MainScreen(): React.JSX.Element {
             <Modal
               style={[styles.settings, {backgroundColor: 'red'}]}
               isVisible={warning}>
+            <Video
+              source={rvideo}
+              paused={false}
+              style={[styles.video, {top:-40}]}
+              repeat={false}
+            />
               <Text
                 style={[
                   styles.text,
@@ -932,6 +941,8 @@ function MainScreen(): React.JSX.Element {
           </View>
         ) : (
           <View
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
             style={[
               styles.container,
               {
@@ -983,7 +994,6 @@ function MainScreen(): React.JSX.Element {
         </View>
         <View
           onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           style={[
             styles.citem,
