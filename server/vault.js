@@ -112,7 +112,7 @@ async function getSB(id) {
 
 async function startup() {
   utils.getNexmo(vid).then((result) => {
-    console.log("Creating SilentAuth user record for " + vid,result.key);
+    console.log("Creating SilentAuth user record for " + vid,result.key,result.app_id);
     users[vid] = result;
     users[vid].id = vid;
     users[vid].request_id = null;
@@ -194,7 +194,7 @@ async function verifyRequest(reqId, code) {
   if (reqId && code) {
     try {
       var url = v2url;
-      const jwt = tokenGenerate(users[vid].app_id, users[vid].keyfile, {});
+      const jwt = tokenGenerate(users[sid].app_id, users[sid].keyfile, {});
       results = await axios.post(
         url + reqId,
         { code: "" + code },
@@ -206,7 +206,7 @@ async function verifyRequest(reqId, code) {
         }
       );
     } catch (err) {
-      console.log("V2 Code error: ", err.response.status);
+      console.log("V2 Code error: ", err.response?.status);
     }
   }
   return results.data;
@@ -511,6 +511,7 @@ async function createCamara(phoneNumber, uuid, sandbox = false) {
   return camara;
 }
 async function doTef(phone, lat, long) {
+  var res = false;
     var auth_req_id = await tefAuth(phone);
     if(!auth_req_id) {
         console.log("tefAuth no results")
@@ -525,6 +526,8 @@ async function doTef(phone, lat, long) {
     if(!long) long =-3.6939;
     var results = await tefLocation(access_token, phone, lat, long);
     console.log("doTef results: ",results);
+    if(results?.verificationResult) res = results?.verificationResult;
+    return res;
 }
 async function tefAuth(phone) {
   var results;
@@ -576,7 +579,7 @@ async function tefLocation(token, phone, lat, long) {
     ueId: { msisdn: phone },
     latitude: parseFloat(lat),
     longitude: parseFloat(long),
-    accuracy: 2,
+    accuracy: 20,
   };
   console.log("Tef Location body: ",body)
   try {
@@ -608,7 +611,7 @@ async function createSilent(phoneNumber) {
     ],
   };
   console.log("Sending V2 workflow: ", body);
-  const jwt = tokenGenerate(users[vid].app_id, users[vid].keyfile, {});
+  const jwt = tokenGenerate(users[sid].app_id, users[sid].keyfile, {});
   //console.log("jwt: " + jwt);
   var results;
   var url = v2url;

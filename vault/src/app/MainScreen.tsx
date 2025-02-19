@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '1.03';
+const ver = '1.05';
 
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
@@ -42,6 +42,8 @@ import GetLocation from 'react-native-get-location';
 import Video from 'react-native-video';
 import vvideo from '../images/vault.mp4';
 import rvideo from '../images/tluav.mp4';
+import bedimage from '../images/bedrock.jpg';
+
 const {VonageVerifySilentAuthModule} = NativeModules;
 
 var phone = '14083753079';
@@ -129,10 +131,31 @@ function Section({children, title}: SectionProps): React.JSX.Element {
     </View>
   );
 }
-
 function MainScreen(): React.JSX.Element {
   const isDarkMode = false; //useColorScheme() === 'dark';
-
+  const doDebug = async inp => {
+    console.log("Inp: ",inp)
+    let body = inp;
+    body.product = 'vault';
+    if (typeof inp === 'string') {
+      console.log("Stringifying debug")
+      body = {debug: inp};
+    }
+    body.version = '' + ver;
+    body.phone = '' + gPhone;
+    console.log('Debug: ', body);
+    try {
+      fetch('https://vids.vonage.com/vfraud/debugNV', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      console.log('Error sending to debug server:', err);
+    }
+  };
   const backgroundStyle = {
     backgroundColor: showVideo ? 'lightgreen' : Colors.lighter,
     //    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter, lightgreen
@@ -160,15 +183,19 @@ function MainScreen(): React.JSX.Element {
 
   const onTouchStart = e => {
     e.preventDefault();
-    console.log('start: ', e.nativeEvent.locationX, Dimensions.get('window').width);
+    console.log(
+      'start: ',
+      e.nativeEvent.locationX,
+      Dimensions.get('window').width,
+    );
     //setTouchEnd(null); // otherwise the swipe is fired even with usual touch events
     setTouchStart(e.nativeEvent.locationX);
   };
   const onTouchMove = e => setTouchEnd(e.nativeEvent.locationX);
-  const onTouchEnd = (e) => {
+  const onTouchEnd = e => {
     var end = e.nativeEvent.locationX;
     console.log('onTouchEnd: ', touchStart, end);
-    if (!touchStart ) return;
+    if (!touchStart) return;
     const distance = touchStart - end;
     const isLeftSwipe = distance > minSwipeDistance;
     if (isLeftSwipe) {
@@ -305,6 +332,7 @@ function MainScreen(): React.JSX.Element {
             );
           const openCheckResponse = JSON.parse(jopenCheckResponse);
           console.log('Redirect response: ', openCheckResponse);
+          doDebug({type: 'checkResponse', checkResponse: openCheckResponse});
           if (openCheckResponse.http_status > 299) {
             updateStatus(index, 'block', 'Invalid number');
           } else if (openCheckResponse.response_body?.code) {
@@ -325,7 +353,8 @@ function MainScreen(): React.JSX.Element {
           }
         } catch (err) {
           updateStatus(index, 'block', 'Unable to verify');
-          console.log('Redirection error: ', err);
+          console.log('Redirection error: '+err);
+          doDebug({type: 'checkResponseErrorCatch', err: err, errno:''+err});
         }
         return;
       }
@@ -563,7 +592,7 @@ function MainScreen(): React.JSX.Element {
   };
 
   const sendUDP = async () => {
-    console.log('Creating UDP socket, sending to ',udpUrl,udpPort);
+    console.log('Creating UDP socket, sending to ', udpUrl, udpPort);
     const socket = dgram.createSocket({type: 'udp4', debug: true});
     socket.bind();
     socket.once('listening', function () {
@@ -705,12 +734,12 @@ function MainScreen(): React.JSX.Element {
             <Modal
               style={[styles.settings, {backgroundColor: 'red'}]}
               isVisible={warning}>
-            <Video
-              source={rvideo}
-              paused={false}
-              style={[styles.video, {top:-40}]}
-              repeat={false}
-            />
+              <Video
+                source={rvideo}
+                paused={false}
+                style={[styles.video, {top: -40}]}
+                repeat={false}
+              />
               <Text
                 style={[
                   styles.text,
@@ -720,6 +749,7 @@ function MainScreen(): React.JSX.Element {
                 ]}>
                 {bedrock}
               </Text>
+              <Image source={bedimage} style={[styles.video,{width:200, height:180,marginTop:20}]}></Image>
               <Text
                 style={[
                   styles.sectionTitle,
@@ -873,7 +903,7 @@ function MainScreen(): React.JSX.Element {
               <BouncyCheckbox
                 key={-3}
                 size={30}
-                text={'Use Sandbox'}
+                text={'Use Playground'}
                 isChecked={sandbox}
                 innerIconStyle={{borderWidth: 4}}
                 textStyle={{
@@ -941,8 +971,8 @@ function MainScreen(): React.JSX.Element {
           </View>
         ) : (
           <View
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
             style={[
               styles.container,
               {
