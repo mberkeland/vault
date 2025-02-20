@@ -14,7 +14,9 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'vault' do
+pod 'VonageClientSDKNumberVerification', '1.1.1'
+
+target 'VonageVault' do
   config = use_native_modules!
 
   use_react_native!(
@@ -23,7 +25,7 @@ target 'vault' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  target 'vaultTests' do
+  target 'VonageVaultTests' do
     inherit! :complete
     # Pods for testing
   end

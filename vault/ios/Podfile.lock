@@ -1866,6 +1866,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - SocketRocket (0.7.1)
+  - VonageClientSDKNumberVerification (1.1.1)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -1943,12 +1944,14 @@ DEPENDENCIES:
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
+  - VonageClientSDKNumberVerification (= 1.1.1)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
   trunk:
     - CocoaAsyncSocket
     - SocketRocket
+    - VonageClientSDKNumberVerification
 
 EXTERNAL SOURCES:
   boost:
@@ -2174,8 +2177,9 @@ SPEC CHECKSUMS:
   RNScreens: e7fb913da559b9b2fe6c2f49828bedb061914abd
   RNSVG: ea3e35f0375ac20449384fa89ce056ee0e0690ee
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
+  VonageClientSDKNumberVerification: 34b61720839fffffb0975164ba4a3efb39d6d47f
   Yoga: c7ea4c36c1d78ebbf45529b6e78283e4e0fe4956
 
-PODFILE CHECKSUM: 00f90b24186e26be37f7900645037c1f50dc2aaa
+PODFILE CHECKSUM: 6670a5d8464c84d6a530438f29a3fbced2abcf0c
 
 COCOAPODS: 1.15.2
