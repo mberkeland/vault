@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '1.05';
+const ver = '1.06';
 
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
@@ -77,7 +77,7 @@ type SectionProps = PropsWithChildren<{
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
-const Header = (): Node => {
+const Header = ({onData}): Node => {
   const isDarkMode = false; // useColorScheme() === 'dark';
   return (
     <ImageBackground
@@ -103,10 +103,16 @@ const Header = (): Node => {
         Vault
       </Text>
       <Text
+        onPress={(e) => {
+          e.preventDefault();
+          console.log("Splashing?")
+          onData(true)}}
         style={[
           styles.ver,
           {
             color: isDarkMode ? Colors.white : Colors.black,
+            textDecorationLine: 'underline',
+            fontWeight: 'bold',
           },
         ]}>
         v{ver}
@@ -134,11 +140,11 @@ function Section({children, title}: SectionProps): React.JSX.Element {
 function MainScreen(): React.JSX.Element {
   const isDarkMode = false; //useColorScheme() === 'dark';
   const doDebug = async inp => {
-    console.log("Inp: ",inp)
+    console.log('Inp: ', inp);
     let body = inp;
     body.product = 'vault';
     if (typeof inp === 'string') {
-      console.log("Stringifying debug")
+      console.log('Stringifying debug');
       body = {debug: inp};
     }
     body.version = '' + ver;
@@ -177,12 +183,13 @@ function MainScreen(): React.JSX.Element {
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [warning, setWarning] = useState(false);
+  const [splash, setSplash] = useState(false);
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 265;
 
   const onTouchStart = e => {
-    e.preventDefault();
+//    e.preventDefault();
     console.log(
       'start: ',
       e.nativeEvent.locationX,
@@ -353,8 +360,8 @@ function MainScreen(): React.JSX.Element {
           }
         } catch (err) {
           updateStatus(index, 'block', 'Unable to verify');
-          console.log('Redirection error: '+err);
-          doDebug({type: 'checkResponseErrorCatch', err: err, errno:''+err});
+          console.log('Redirection error: ' + err);
+          doDebug({type: 'checkResponseErrorCatch', err: err, errno: '' + err});
         }
         return;
       }
@@ -749,12 +756,71 @@ function MainScreen(): React.JSX.Element {
                 ]}>
                 {bedrock}
               </Text>
-              <Image source={bedimage} style={[styles.video,{width:200, height:180,marginTop:20}]}></Image>
+              <Image
+                source={bedimage}
+                style={[
+                  styles.video,
+                  {width: 200, height: 180, marginTop: 20},
+                ]}></Image>
               <Text
                 style={[
                   styles.sectionTitle,
                   {
                     color: 'yellow',
+                    marginTop: 70,
+                  },
+                ]}>
+                Touch anywhere to dismiss
+              </Text>
+            </Modal>
+          </View>
+        )}
+        {splash && (
+          <View
+            onTouchStart={() => {
+              setSplash(false);
+            }}>
+            <Modal
+              style={[styles.settings, {backgroundColor: 'lightgray'}]}
+              isVisible={splash}>
+              <Image
+                source={require('../images/VonagePOE_Primary.png')}
+                style={[
+                  {width: 240, height: 80, marginTop: -120, marginLeft: -150},
+                ]}></Image>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    color: 'darkblue',
+                    marginTop: 20,
+                  },
+                ]}>
+                Built with our partners
+              </Text>
+              <Image
+                source={require('../images/tef.png')}
+                style={[
+                  styles.video,
+                  {width: 340, height: 80, marginTop: 20},
+                ]}></Image>
+              <Image
+                source={require('../images/aduna.png')}
+                style={[
+                  styles.video,
+                  {width: 300,height: 100, marginTop: 20},
+                ]}></Image>
+              <Image
+                source={require('../images/awspartner.png')}
+                style={[
+                  styles.video,
+                  {width: 200, height: 150, marginTop: 20},
+                ]}></Image>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    color: 'blue',
                     marginTop: 70,
                   },
                 ]}>
@@ -979,7 +1045,12 @@ function MainScreen(): React.JSX.Element {
                 backgroundColor: isDarkMode ? Colors.black : '',
               },
             ]}>
-            <Header />
+            <Header
+              onData={() => {
+                console.log('Splashing');
+                setSplash(true);
+              }}
+            />
             {countryCode && (
               <PhoneInput
                 containerStyle={styles.phone}
