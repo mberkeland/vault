@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '1.08';
+const ver = '1.09';
 
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
@@ -858,9 +858,6 @@ function MainScreen(): React.JSX.Element {
               <Text
                   style={[
                     styles.techtext,
-                    {
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    },
                   ]}>
                   {tasks[state].tech}
                 </Text>
