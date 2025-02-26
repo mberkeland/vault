@@ -41,6 +41,17 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
+  subtext: {
+    fontSize: 30,
+    textAlign: 'center',
+  },
+  techtext: {
+    fontSize: 20,
+    textAlign: 'left',
+    position: 'absolute',
+    left: 1,
+    top:20
+  },
   checkbox: {
     width: 64,
     height: 64,

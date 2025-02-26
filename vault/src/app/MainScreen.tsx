@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '1.06';
+const ver = '1.08';
 
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
@@ -65,7 +65,7 @@ const filel = require('../images/loading.gif');
 var deviceId;
 var myLoc;
 var bedrock =
-  'Warning!\n\nDue to unacceptable authorization checks, this transaction will not proceed.';
+  'Warning!\n\nBack-end AI processing indicates fraud pattern; this transaction halted.';
 getUniqueId().then(id => {
   deviceId = id;
   console.log('Initialized deviceId: ', deviceId);
@@ -184,6 +184,7 @@ function MainScreen(): React.JSX.Element {
   const [touchEnd, setTouchEnd] = useState(null);
   const [warning, setWarning] = useState(false);
   const [splash, setSplash] = useState(false);
+  const [light, setLight] = useState(true);
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 265;
@@ -413,8 +414,9 @@ function MainScreen(): React.JSX.Element {
       tag: 'fd',
       name: 'Fraud\nDefender',
       desc: '',
+      tech: 'Vonage API',
       prompt:
-        'Using the Vonage Fraud Defender APIs to check the number fraud indicators',
+        'Using Vonage Fraud APIs to check for likely fraudulent numbers',
       active: true,
       live: true,
       status: '-1',
@@ -428,6 +430,7 @@ function MainScreen(): React.JSX.Element {
       tag: 'fraud',
       name: 'Number\nFraud',
       desc: '',
+      tech: 'Vonage API',
       active: true,
       live: true,
       status: '-1',
@@ -440,7 +443,8 @@ function MainScreen(): React.JSX.Element {
       tag: 'simswap',
       name: 'SIM\nSwap',
       desc: '',
-      prompt: 'Checking if the SIM has been recently swapped',
+      tech: 'Network API',
+      prompt: 'Checking to see if number recently moved to another SIM',
       active: true,
       live: true,
       status: '-1',
@@ -453,7 +457,8 @@ function MainScreen(): React.JSX.Element {
       tag: 'nv',
       name: 'Number\nVerification',
       desc: '',
-      prompt: 'Verifying that this device is actually the number indicated',
+      tech: 'Network API',
+      prompt: 'Silently verifying that this phone is the number expected',
       active: true,
       live: true,
       status: '-1',
@@ -466,7 +471,8 @@ function MainScreen(): React.JSX.Element {
       tag: 'location',
       name: 'Device\nLocation',
       desc: '',
-      prompt: 'Using Network Location APIs to detect fraudulent access',
+      tech: 'Network API',
+      prompt: 'Checking to see that the phone is in the location expected',
       active: true,
       live: true,
       status: '-1',
@@ -479,7 +485,8 @@ function MainScreen(): React.JSX.Element {
       tag: 'facial',
       name: 'Facial\nLiveness',
       desc: '',
-      prompt: 'Checking facial Liveness to prevent AI/Bots',
+      tech: 'Amazon API',
+      prompt: 'Checking ‘Facial Liveness’ to prevent pictures or AI bots',
       active: true,
       live: true,
       status: '-1',
@@ -505,6 +512,10 @@ function MainScreen(): React.JSX.Element {
       val = await AsyncStorage.getItem('sandbox');
       if (val === 'true') {
         setSandbox(true);
+      }
+      val = await AsyncStorage.getItem('light');
+      if (val === 'false') {
+        setLight(false);
       }
       tasks.map(async task => {
         val = await AsyncStorage.getItem(task.tag);
@@ -592,6 +603,7 @@ function MainScreen(): React.JSX.Element {
     AsyncStorage.setItem('fast', '' + fast);
     AsyncStorage.setItem('demo', '' + demo);
     AsyncStorage.setItem('sandbox', '' + sandbox);
+    AsyncStorage.setItem('light', '' + light);
     tasks.map(task => {
       console.log('Setting: ', task.tag, task.active);
       AsyncStorage.setItem(task.tag, '' + task.active);
@@ -599,6 +611,10 @@ function MainScreen(): React.JSX.Element {
   };
 
   const sendUDP = async () => {
+    if(!light) {
+      console.log("Not lighting the light...")
+      return;
+    }
     console.log('Creating UDP socket, sending to ', udpUrl, udpPort);
     const socket = dgram.createSocket({type: 'udp4', debug: true});
     socket.bind();
@@ -659,7 +675,9 @@ function MainScreen(): React.JSX.Element {
         setDone(true);
       }
     } else {
-      alterState(0);
+      console.log('Altering state: ', state, tasks.length);
+      var v = 0;
+      alterState(v);
     }
   };
   const onMessage = data => {
@@ -703,6 +721,7 @@ function MainScreen(): React.JSX.Element {
     setPopup(false);
     setWarning(false);
     preFacial = false;
+    alterState(null);
 
     //await AsyncStorage.clear();
   };
@@ -836,6 +855,15 @@ function MainScreen(): React.JSX.Element {
               transparent={false}
               isVisible={popup}>
               <View style={styles.container}>
+              <Text
+                  style={[
+                    styles.techtext,
+                    {
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    },
+                  ]}>
+                  {tasks[state].tech}
+                </Text>
                 <Text
                   style={[
                     styles.text,
@@ -844,7 +872,15 @@ function MainScreen(): React.JSX.Element {
                     },
                   ]}>
                   {tasks[state].name.replace(/\n/g, ' ')}
-                  {'\n\n'}
+                </Text>
+                <Text
+                  style={[
+                    styles.subtext,
+                    {
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    },
+                  ]}>
+                  {'\n'}
                   {tasks[state].prompt}
                   {'\n\n'}
                 </Text>
@@ -855,7 +891,7 @@ function MainScreen(): React.JSX.Element {
                       color: isDarkMode ? Colors.white : Colors.black,
                     },
                   ]}>
-                  Results:
+                  Result:
                   {'\n'}
                 </Text>
                 {tasks[state].status == -4 ? (
@@ -956,7 +992,7 @@ function MainScreen(): React.JSX.Element {
                 }}
                 style={{
                   width: '90%',
-                  marginTop: 20,
+                  marginTop: 10,
                   marginLeft: -10,
                 }}
                 onPress={(isChecked: boolean) => {
@@ -978,8 +1014,7 @@ function MainScreen(): React.JSX.Element {
                 }}
                 style={{
                   width: '90%',
-                  marginTop: 20,
-                  marginBottom: 40,
+                  marginTop: 10,
                   marginLeft: -10,
                 }}
                 onPress={(isChecked: boolean) => {
@@ -987,6 +1022,26 @@ function MainScreen(): React.JSX.Element {
                   if (isChecked) {
                     setDemo(false);
                   }
+                }}
+              />
+              <BouncyCheckbox
+                key={-4}
+                size={30}
+                text={'Light the Light'}
+                isChecked={light}
+                innerIconStyle={{borderWidth: 4}}
+                textStyle={{
+                  textDecorationLine: 'none',
+                  fontSize: 30,
+                }}
+                style={{
+                  width: '90%',
+                  marginTop: 10,
+                  marginBottom: 10,
+                  marginLeft: -10,
+                }}
+                onPress={(isChecked: boolean) => {
+                  setLight(isChecked);
                 }}
               />
               {tasks.map(task => {

@@ -64,7 +64,7 @@ app.get("/keepalive", (req, res) => {
   res.sendStatus(200);
 });
 async function getSB(id) {
-  console.log("Creting sandbox user: ", id);
+  console.log("Creating sandbox user: ", id);
   utils.getNexmo(id).then((result) => {
     users[id] = result;
     users[id].id = id;
