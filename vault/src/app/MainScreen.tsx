@@ -800,7 +800,7 @@ function MainScreen(): React.JSX.Element {
               setSplash(false);
             }}>
             <Modal
-              style={[styles.settings, {backgroundColor: 'lightgray'}]}
+              style={[styles.settings, {backgroundColor: 'white'}]}
               isVisible={splash}>
               <Image
                 source={require('../images/VonagePOE_Primary.png')}
@@ -821,10 +821,10 @@ function MainScreen(): React.JSX.Element {
                 source={require('../images/tef.png')}
                 style={[
                   styles.video,
-                  {width: 340, height: 80, marginTop: 20},
+                  {width: 340, height: 80, marginTop: 40},
                 ]}></Image>
               <Image
-                source={require('../images/aduna.png')}
+                source={require('../images/aduna2.png')}
                 style={[
                   styles.video,
                   {width: 300,height: 100, marginTop: 20},
@@ -839,7 +839,7 @@ function MainScreen(): React.JSX.Element {
                 style={[
                   styles.sectionTitle,
                   {
-                    color: 'blue',
+                    color: 'darkblue',
                     marginTop: 70,
                   },
                 ]}>
