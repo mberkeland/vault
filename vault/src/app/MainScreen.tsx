@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '1.09';
+const ver = '1.10';
 
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
@@ -52,8 +52,8 @@ var gPhone;
 var vUrl = 'https://neru-ef3346a6-debug-vault.use1.runtime.vonage.cloud';
 var phase = 0;
 var faceUrl = 'https://main.d3sn8is0cbxe5o.amplifyapp.com';
-var udpUrl = vUrl;
-var udpPort = 41234;
+var udpUrl = "10.47.111.20";
+var udpPort = 50000;
 var bcolor = '#ECFFDC';
 var endVideo = vvideo;
 const filex = require('../images/redx2.gif');
@@ -620,7 +620,7 @@ function MainScreen(): React.JSX.Element {
     socket.bind();
     socket.once('listening', function () {
       socket.send(
-        'VIDS',
+        'lighton',
         undefined,
         undefined,
         parseInt(udpPort),

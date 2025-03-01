@@ -338,6 +338,9 @@ app.post("/getSimswap", async (req, res) => {
   ) {
     var ss = await getSS2(phone);
     console.log("Got Camara SS results: ", ss);
+    if(ss == 'invalid') {
+      action = 'warning'
+    }
     return res.status(200).json({ results: action, data: ss });
   }
   var body = {
