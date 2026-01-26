@@ -28,7 +28,7 @@ const app = express();
 const port = process.env.VCR_PORT;
 const server_url = process.env.VCR_INSTANCE_PUBLIC_URL;
 
-console.log("Starting up with URL = " + server_url);
+console.log("Starting up MWC version with URL = " + server_url);
 let gnids;
 utils.getIniStuff().then((res) => {
   gnids = res;
