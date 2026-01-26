@@ -1,6 +1,7 @@
 import { Vonage } from "@vonage/server-sdk";
 import { vcr } from "@vonage/vcr-sdk";
 import { tokenGenerate } from "@vonage/jwt";
+//import { IdentityInsights } from "@vonage/identity-insights";
 
 import express from "express";
 import axios from "axios";
@@ -60,7 +61,7 @@ app.get("/_/health", async (req, res) => {
   res.sendStatus(200);
 });
 app.get("/keepalive", (req, res) => {
-  console.log("Keepalive: " + req.query);
+  //console.log("Keepalive: " + req.query);
   res.sendStatus(200);
 });
 async function getSB(id) {
@@ -112,7 +113,7 @@ async function getSB(id) {
 
 async function startup() {
   utils.getNexmo(vid).then((result) => {
-    console.log("Creating SilentAuth user record for " + vid,result.key,result.app_id);
+    console.log("Creating SilentAuth user record for " + vid, result.key, result.app_id);
     users[vid] = result;
     users[vid].id = vid;
     users[vid].request_id = null;
@@ -156,7 +157,7 @@ async function startup() {
       .catch((err) => console.error(err));
   });
   utils.getNexmo(sid).then((result) => {
-    console.log("Creating SIMSwap/Sandbox user record for " + sid,result.key);
+    console.log("Creating SIMSwap/Sandbox user record for " + sid, result.key);
     users[sid] = result;
     users[sid].id = vid;
     users[sid].request_id = null;
@@ -170,9 +171,9 @@ async function startup() {
       .catch((err) => console.log("VCR interval error:", err.code));
   }, 30000);
   await getSB(sbox);
-  console.log("****************************** TEF Location") 
+  console.log("****************************** TEF Location")
   var lat = 40.44509;
-  var long =  -3.6939;
+  var long = -3.6939;
   //await doTef(tef_phone, lat, long );
 }
 app.post("/verifystatus", (req, res) => {
@@ -323,7 +324,7 @@ app.post("/getSimswap", async (req, res) => {
   );
   var results = {};
   var ss = "invalid";
-  var action = "allow";
+  var action = "warning"; // was "allow"
   if (req.body.demo) {
     // If demo mode, skip and return true...
     results = {
@@ -334,11 +335,11 @@ app.post("/getSimswap", async (req, res) => {
   if (
     phone.startsWith("49") ||
     phone.startsWith("34") ||
-    phone.startsWith("14083751")
+    phone.startsWith("x1408375")
   ) {
     var ss = await getSS2(phone);
     console.log("Got Camara SS results: ", ss);
-    if(ss == 'invalid') {
+    if (ss == 'invalid') {
       action = 'warning'
     }
     return res.status(200).json({ results: action, data: ss });
@@ -353,15 +354,56 @@ app.post("/getSimswap", async (req, res) => {
 
   console.log("Number Insight request: ", body);
   try {
-    results = await axios.post("https://api.nexmo.com/v2/ni", body, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Basic " + basic,
-      },
-    });
-    console.log("Got insight v2 results: ", results.data);
-    if (results.data?.sim_swap) {
-      action = results.data.sim_swap.swapped ? "block" : "allow";
+    if (1 || phone.startsWith("1408375")) {
+      console.log("Using Identity Insights");
+      const jwt = tokenGenerate(users[sid].app_id, users[sid].keyfile, {});
+      const params = {
+  phone_number: phone,
+  insights: {
+    format: {},
+    original_carrier: {},
+    current_carrier: {},
+                sim_swap: {
+              period: 240
+            },
+  },
+};
+//const clientInsights = new IdentityInsights(jwt, {});
+
+//const results = await clientInsights.getIdentityInsights(params);
+      var obj = {
+        phone_number: phone,
+        purpose: "FraudPreventionAndDetection",
+        insights: {
+            format: {},
+            sim_swap: {
+              period: 240
+            },
+            original_carrier: {},
+            current_carrier: {}
+          }
+        }
+      results = await axios.post("https://api-us.vonage.com/v0.1/identity-insights", obj, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + jwt,
+        },
+      });
+      console.log("Got Number Insightresults: ", results.data, results.data?.insights?.sim_swap);
+      if (results.data?.insights?.sim_swap?.hasOwnProperty('is_swapped')) {
+        action = (results.data.insights.sim_swap.is_swapped) ? "block" : "allow";
+      }
+    } else {
+      results = await axios.post("https://api.nexmo.com/v2/ni", body, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Basic " + basic,
+        },
+      });
+      console.log("Got insight v2 results: ", results.data);
+      if (results.data?.sim_swap) {
+        action = results.data.sim_swap.swapped ? "block" : "allow";
+      }
     }
   } catch (err) {
     console.log("getFraud error", err);
@@ -383,8 +425,8 @@ app.post("/getNv", async (req, res) => {
   let type = "sa";
   let sandbox = false;
   if (
-//    phone.startsWith("49") ||
-//    phone.startsWith("34") ||
+    //    phone.startsWith("49") ||
+    //    phone.startsWith("34") ||
     phone.startsWith("990")
   ) {
     type = "nv";
@@ -416,17 +458,17 @@ app.post("/getLocation", async (req, res) => {
     console.log("No phone passed in.");
     return res.status(200).end();
   }
-  if(phone.startsWith("34") || phone.startsWith("+34") || req.body.sandbox){ // TEF, most likely
-    if(!phone.startsWith("+")) phone = "+"+phone;
+  if (phone.startsWith("34") || phone.startsWith("+34") || req.body.sandbox) { // TEF, most likely
+    if (!phone.startsWith("+")) phone = "+" + phone;
     var lat = 40.44509;
-    var long =  -3.6939;
-    if(req.body.location?.latitude) lat = req.body.location.latitude
-    if(req.body.location?.longitude) long = req.body.location.longitude
-        var tef =   await doTef(phone, lat, long );
-        if(! tef || tef == 'NOT_FOUND') {
-            results= 'block'
-        }
-   }
+    var long = -3.6939;
+    if (req.body.location?.latitude) lat = req.body.location.latitude
+    if (req.body.location?.longitude) long = req.body.location.longitude
+    var tef = await doTef(phone, lat, long);
+    if (!tef || tef == 'NOT_FOUND') {
+      results = 'block'
+    }
+  }
   return res.status(200).json({ results: results });
 });
 app.post("/getFacial", (req, res) => {
@@ -443,8 +485,8 @@ async function getSS2(phone) {
   try {
     let results = await axios.post(
       "https://api-eu.vonage.com/oauth2/bc-authorize?login_hint=tel:" +
-        phone +
-        "&scope=openid%20dpv%3AFraudPreventionAndDetection%23check-sim-swap",
+      phone +
+      "&scope=openid%20dpv%3AFraudPreventionAndDetection%23check-sim-swap",
       {},
       {
         headers: {
@@ -457,7 +499,7 @@ async function getSS2(phone) {
     console.log("oAuth authorization request: ", results.data);
     let results2 = await axios.post(
       "https://api-eu.vonage.com/oauth2/token?grant_type=urn:openid:params:grant-type:ciba&auth_req_id=" +
-        results.data.auth_req_id,
+      results.data.auth_req_id,
       {},
       {
         headers: {
@@ -501,7 +543,7 @@ async function createCamara(phoneNumber, uuid, sandbox = false) {
     console.log("Setting Sandbox into Redirection, app=" + app);
   }
   let camara = encodeURI("https://oidc.idp.vonage.com/oauth2/auth");
-  camara += "?client_id=" + app; 
+  camara += "?client_id=" + app;
   camara += "&redirect_uri=" + server_url + "/nverify";
   //    camara += '&redirect_uri=' + 'https://vids.vonage.com/vfraud' + '/nverify';
   camara += "&response_type=code";
@@ -515,22 +557,22 @@ async function createCamara(phoneNumber, uuid, sandbox = false) {
 }
 async function doTef(phone, lat, long) {
   var res = false;
-    var auth_req_id = await tefAuth(phone);
-    if(!auth_req_id) {
-        console.log("tefAuth no results")
-        return;
-    }
-    var access_token = await tefAccess(auth_req_id);
-    if(!access_token) {
-        console.log("tefAccess no results")
-        return;
-    }
-    if(!lat) lat = 40.44509;
-    if(!long) long =-3.6939;
-    var results = await tefLocation(access_token, phone, lat, long);
-    console.log("doTef results: ",results);
-    if(results?.verificationResult) res = results?.verificationResult;
-    return res;
+  var auth_req_id = await tefAuth(phone);
+  if (!auth_req_id) {
+    console.log("tefAuth no results")
+    return;
+  }
+  var access_token = await tefAccess(auth_req_id);
+  if (!access_token) {
+    console.log("tefAccess no results")
+    return;
+  }
+  if (!lat) lat = 40.44509;
+  if (!long) long = -3.6939;
+  var results = await tefLocation(access_token, phone, lat, long);
+  console.log("doTef results: ", results);
+  if (results?.verificationResult) res = results?.verificationResult;
+  return res;
 }
 async function tefAuth(phone) {
   var results;
@@ -540,9 +582,9 @@ async function tefAuth(phone) {
     login_hint: "tel:" + phone,
     purpose: "dpv:FraudPreventionAndDetection#device-location-read",
   };
-  console.log("tef Basic auth: ",body,'Basic ' + btoa(process.env.tef_id + ':' + process.env.tef_secret))
+  console.log("tef Basic auth: ", body, 'Basic ' + btoa(process.env.tef_id + ':' + process.env.tef_secret))
   try {
-      results = await axios.post(url, body, {
+    results = await axios.post(url, body, {
       headers: {
         "content-type": "application/x-www-form-urlencoded",
         Authorization: 'Basic ' + btoa(process.env.tef_id + ':' + process.env.tef_secret)
@@ -575,8 +617,8 @@ async function tefAccess(reqId) {
   }
 }
 async function tefLocation(token, phone, lat, long) {
-  if(!lat) lat = 40.44509;
-  if(!long) long =-3.6939;
+  if (!lat) lat = 40.44509;
+  if (!long) long = -3.6939;
   var url = "https://sandbox.opengateway.telefonica.com/apigateway/location/v0/verify";
   var body = {
     ueId: { msisdn: phone },
@@ -584,20 +626,20 @@ async function tefLocation(token, phone, lat, long) {
     longitude: parseFloat(long),
     accuracy: 20,
   };
-  console.log("Tef Location body: ",body)
+  console.log("Tef Location body: ", body)
   try {
     var results = await axios.post(url, body, {
       headers: {
         'Authorization': 'Bearer ' + token,
-        'Content-Type' : 'application/json'
-  },
+        'Content-Type': 'application/json'
+      },
     });
     console.log("tefLocation results: ", results.data);
     return results.data;
   } catch (err) {
     console.log("tefLocation error: ", err.response?.data);
-    if(err.response?.data?.code) {
-        return err.response.data.code;
+    if (err.response?.data?.code) {
+      return err.response.data.code;
     }
   }
 }
@@ -659,8 +701,8 @@ async function nvcall(phone, token) {
     );
     console.log(
       "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Camara nverify devicecheck request, got results for " +
-        phone +
-        ": ",
+      phone +
+      ": ",
       results.data
     );
     return results.data;
@@ -700,7 +742,7 @@ app.all("/nverify", async (req, res) => {
         grant_type: "authorization_code",
         redirect_uri: server_url + "/nverify",
         code: code,
-        client_id: app, 
+        client_id: app,
       }),
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",

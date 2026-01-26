@@ -49,7 +49,7 @@ const {VonageVerifySilentAuthModule} = NativeModules;
 var phone = '14083753079';
 var started = null;
 var gPhone;
-var vUrl = 'https://neru-ef3346a6-debug-vault.use1.runtime.vonage.cloud';
+var vUrl = 'https://neru-ef3346a6-vault-vault.use1.runtime.vonage.cloud';
 var phase = 0;
 var faceUrl = 'https://main.d3sn8is0cbxe5o.amplifyapp.com';
 var udpUrl = "10.47.111.20";
