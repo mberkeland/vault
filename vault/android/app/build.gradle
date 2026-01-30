@@ -105,6 +105,10 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+   // Only for Kotlin projects
+   //kotlinOptions {
+   //    jvmTarget = JavaVersion.VERSION_17.toString()
+   //}
 }
 
 dependencies {
@@ -115,6 +119,7 @@ dependencies {
     implementation 'com.facebook.fresco:animated-webp:3.5.0'
     implementation 'com.facebook.fresco:webpsupport:3.5.0'
     implementation 'com.vonage:client-sdk-number-verification:1.1.1'
+    implementation 'com.vonage:client-sdk:1.4.0'
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

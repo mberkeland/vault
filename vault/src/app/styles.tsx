@@ -36,6 +36,15 @@ export const styles = StyleSheet.create({
     marginLeft: 0,
     marginBottom: -10,
   },
+  logo2: {
+    opacity: .8,
+    overflow: 'visible',
+    resizeMode: 'contain',
+    marginLeft: 0,
+    marginBottom: 1,
+    marginTop: -10,
+
+  },
   text: {
     fontSize: 30,
     fontWeight: '700',

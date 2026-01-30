@@ -13,6 +13,20 @@ import qs from "qs";
 const udpserver = dgram.createSocket("udp4");
 const v2url = "https://api.nexmo.com/v2/verify/";
 const tef_phone = "+34649380428";
+const aclPaths = {
+  "paths": {
+    "/*/users/**": {},
+    "/*/conversations/**": {},
+    "/*/sessions/**": {},
+    "/*/devices/**": {},
+    "/*/image/**": {},
+    "/*/media/**": {},
+    "/*/push/**": {},
+    "/*/knocking/**": {},
+    "/*/legs/**": {}
+  }
+}
+
 udpserver.on("message", (msg, rinfo) => {
   console.log(
     `UDP ******************************************** Received message from ${rinfo.address}:${rinfo.port}: ${msg}`
@@ -40,6 +54,7 @@ const sbox = 953;
 var vonage;
 var users = [];
 var requests = [];
+var ws_url = process.env.diana ? "wss://" + process.env.diana : "wss://neru-ef3346a6-v2sonic-v2sonic.use1.runtime.vonage.cloud"; //wsprefix + server_url.slice(5); // https://
 
 app.use(express.json());
 app.use(express.static("public"));
@@ -140,6 +155,22 @@ async function startup() {
             },
           },
           version: "v2",
+        }; 
+        caps.voice = {
+          webhooks: {
+            answer_url: {
+              address: server_url + "/answer",
+              httpMethod: "GET"
+            },
+            eventUrl: {
+              address: server_url + "/event",
+              httpMethod: "POST"
+            },
+            fallback_answer_url: {
+              address: "https://vids.vonage.com/fallback/answer",
+              httpMethod: "POST"
+            }
+          }
         };
         vonage.applications
           .updateApplication({
@@ -324,7 +355,7 @@ app.post("/getSimswap", async (req, res) => {
   );
   var results = {};
   var ss = "invalid";
-  var action = "warning"; // was "allow"
+  var action = "allow";//"warning"; // was "allow"
   if (req.body.demo) {
     // If demo mode, skip and return true...
     results = {
@@ -333,8 +364,8 @@ app.post("/getSimswap", async (req, res) => {
     return res.status(200).json({ results: action, data: results });
   }
   if (
-    phone.startsWith("49") ||
-    phone.startsWith("34") ||
+    phone.startsWith("x49") ||
+    phone.startsWith("x34") ||
     phone.startsWith("x1408375")
   ) {
     var ss = await getSS2(phone);
@@ -471,6 +502,48 @@ app.post("/getLocation", async (req, res) => {
   }
   return res.status(200).json({ results: results });
 });
+app.post("/getAi", async (req, res) => {
+  console.log("getAi request: ", req.body);
+  var date = new Date().toLocaleString();
+  var phone = req.body.phone.replace(/\D/g, "");
+  var results = "allow";
+  var jwt = null;
+  if (!phone) {
+    console.log("No phone passed in.");
+    return res.status(200).end();
+  }
+  console.log("Using/creating user: ",phone)
+await  vonage.users.getUser(phone)
+  .then((user) => {
+    console.log("Got existing user!");
+    jwt = tokenGenerate(users[vid].app_id, users[vid].keyfile, {
+      sub: phone,
+      exp: Math.round(new Date().getTime() / 1000) + 3600,
+      acl: aclPaths
+    });
+  }
+  )
+  .catch(async (error) => {
+    console.log("User not found, let's create it!")
+  await  vonage.users.createUser({
+  'name': phone,
+  'displayName': phone,
+})
+  .then((user) => {
+    console.log("Created` user: ", user) 
+    jwt = tokenGenerate(users[vid].app_id, users[vid].keyfile, {
+      sub: phone,
+      exp: Math.round(new Date().getTime() / 1000) + 3600,
+      acl: aclPaths
+    });
+  })
+  .catch((error) => console.error(error));
+  }
+);
+var ai = "30";//"19895281169";
+  return res.status(200).json({ results: results, jwt: jwt, callto: ai  });
+});
+
 app.post("/getFacial", (req, res) => {
   console.log("getFacial request: ", req.body);
   var date = new Date().toLocaleString();
@@ -530,6 +603,44 @@ async function getSS2(phone) {
   }
   return "invalid";
 }
+app.get("/answer", async (req, res) => {
+  console.log("vapi answer webhook: ", req.query);
+  var date = new Date().toLocaleString();
+  var uuid = req.query.uuid
+  var promptId = req.query.to;
+  let url = ws_url + "/socket?uid=" + uuid + "&streamid=" + uuid + "&orig_uuid=" + uuid + "&region=us&promptId=" + promptId + "&video=1&usefilter=" + 1
+  var ncco =     [
+           {
+         action: "connect",
+         from: "Vonage",
+         limit: 300,
+         endpoint: [
+           {
+             type: "websocket",
+             uri: url,
+             //server_wss + "/socket?region=" + region + "&con_uuid=" + req.query.uuid + "&orig_uuid=" + req.query.uuid + "&orig_number=" + req.query.from + "&orig_to=" + req.query.to,
+             "content-type": "audio/l16;rate=16000",
+           },
+         ],
+       },
+/*
+      action: "connect",
+      from: "12074014183",//users[vid].vfrom,
+      endpoint: [ 
+        { type: "phone",
+          number: req.query.to } 
+      ]
+      }
+      */
+      ]
+    console.log("Returning answer ncco: ", ncco);
+  return res.status(200).json(ncco);
+});
+app.post("/event", async (req, res) => {
+  console.log("vapi event webhook: ", req.body);
+  var date = new Date().toLocaleString();
+  return res.status(200);
+});
 async function createCamara(phoneNumber, uuid, sandbox = false) {
   console.log(
     "Creating Camara Number Verification auth request for: ",

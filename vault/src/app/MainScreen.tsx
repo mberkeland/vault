@@ -4,8 +4,9 @@
  *
  * @format
  */
-const ver = '1.10';
-
+const ver = '2.00';
+const DEBUG = true;
+const LOCAL = false;
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
 import {
@@ -25,6 +26,7 @@ import {
   ActivityIndicator,
   NativeModules,
   Dimensions,
+  NativeEventEmitter,
 } from 'react-native';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
@@ -42,17 +44,23 @@ import GetLocation from 'react-native-get-location';
 import Video from 'react-native-video';
 import vvideo from '../images/vault.mp4';
 import rvideo from '../images/tluav.mp4';
+import tvideo from '../images/TBVault.mp4';
 import bedimage from '../images/bedrock.jpg';
+import {request, requestMultiple, PERMISSIONS} from 'react-native-permissions';
+import Sound from 'react-native-sound';
 
-const {VonageVerifySilentAuthModule} = NativeModules;
+const eventEmitter = new NativeEventEmitter(NativeModules.EventEmitter);
+const {VonageVerifySilentAuthModule, ClientManager} = NativeModules;
 
 var phone = '14083753079';
 var started = null;
 var gPhone;
-var vUrl = 'https://neru-ef3346a6-vault-vault.use1.runtime.vonage.cloud';
+var vUrl = DEBUG
+  ? 'https://neru-ef3346a6-debug-vault.use1.runtime.vonage.cloud'
+  : 'https://neru-ef3346a6-vault-vault.use1.runtime.vonage.cloud';
 var phase = 0;
 var faceUrl = 'https://main.d3sn8is0cbxe5o.amplifyapp.com';
-var udpUrl = "10.47.111.20";
+var udpUrl = '10.47.111.20';
 var udpPort = 50000;
 var bcolor = '#ECFFDC';
 var endVideo = vvideo;
@@ -64,6 +72,7 @@ const filee = require('../images/exclamation.png');
 const filel = require('../images/loading.gif');
 var deviceId;
 var myLoc;
+var gcallto;
 var bedrock =
   'Warning!\n\nBack-end AI processing indicates fraud pattern; this transaction halted.';
 getUniqueId().then(id => {
@@ -77,50 +86,6 @@ type SectionProps = PropsWithChildren<{
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
-const Header = ({onData}): Node => {
-  const isDarkMode = false; // useColorScheme() === 'dark';
-  return (
-    <ImageBackground
-      accessibilityRole="image"
-      testID="new-app-screen-header"
-      source={require('../images/vonage_logo.png')}
-      style={[
-        styles.background,
-        {
-          backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-        },
-      ]}
-      imageStyle={styles.logo}>
-      <Text
-        style={[
-          styles.text,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        The Vonage
-        {'\n'}
-        Vault
-      </Text>
-      <Text
-        onPress={(e) => {
-          e.preventDefault();
-          console.log("Splashing?")
-          onData(true)}}
-        style={[
-          styles.ver,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-            textDecorationLine: 'underline',
-            fontWeight: 'bold',
-          },
-        ]}>
-        v{ver}
-      </Text>
-    </ImageBackground>
-  );
-};
-
 function Section({children, title}: SectionProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   return (
@@ -137,6 +102,25 @@ function Section({children, title}: SectionProps): React.JSX.Element {
     </View>
   );
 }
+function hello() {
+  console.log('Playing hello sound from ', Sound.MAIN_BUNDLE);
+  const sound = new Sound('hablame.wav', Sound.MAIN_BUNDLE, error => {
+    if (error) {
+      console.log('failed to load the sound', error);
+      return;
+    }
+    // Enable the speakerphone
+    sound.setSpeakerphoneOn(true); // pass true or false
+    sound.play(success => {
+      if (success) {
+        console.log('successfully finished playing');
+      } else {
+        console.log('playback failed due to audio decoding errors');
+      }
+    });
+  });
+}
+
 function MainScreen(): React.JSX.Element {
   const isDarkMode = false; //useColorScheme() === 'dark';
   const doDebug = async inp => {
@@ -166,6 +150,69 @@ function MainScreen(): React.JSX.Element {
     backgroundColor: showVideo ? 'lightgreen' : Colors.lighter,
     //    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter, lightgreen
   };
+  const Header = ({onData}): Node => {
+    const isDarkMode = false; // useColorScheme() === 'dark';
+    return (
+      <ImageBackground
+        accessibilityRole="image"
+        testID="new-app-screen-header"
+        source={
+          skin === 'vault'
+            ? require('../images/vonage_logo.png')
+            : require('../images/TB2.png')
+        }
+        style={[
+          styles.background,
+          {
+            backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+          },
+        ]}
+        imageStyle={skin === 'vault' ? styles.logo : styles.logo2}>
+        {skin === 'vault' ? (
+          <Text
+            style={[
+              styles.text,
+              {
+                color: isDarkMode ? Colors.white : Colors.black,
+              },
+            ]}>
+            The Vonage
+            {'\n'}
+            Vault
+          </Text>
+        ) : (
+          <Text
+            style={[
+              styles.text,
+              {
+                color: Colors.dark,
+              },
+            ]}>
+            Trusted
+            {'\n\n\n'}
+            Bank
+            {'\n'}
+          </Text>
+        )}
+        <Text
+          onPress={e => {
+            e.preventDefault();
+            console.log('Splashing?');
+            onData(true);
+          }}
+          style={[
+            styles.ver,
+            {
+              color: isDarkMode ? Colors.white : Colors.black,
+              textDecorationLine: 'underline',
+              fontWeight: 'bold',
+            },
+          ]}>
+          v{ver}
+        </Text>
+      </ImageBackground>
+    );
+  };
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
   const [inputNumber, setInputNumber] = useState(null);
@@ -185,12 +232,16 @@ function MainScreen(): React.JSX.Element {
   const [warning, setWarning] = useState(false);
   const [splash, setSplash] = useState(false);
   const [light, setLight] = useState(true);
-
+  const [skin, setSkin] = useState('vault');
+  const [cbutton, setCbutton] = useState('Call Trusted Bank');
+  const [inCall, setInCall] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [startsplash, setStartSplash] = useState(false);
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 265;
 
   const onTouchStart = e => {
-//    e.preventDefault();
+    //    e.preventDefault();
     console.log(
       'start: ',
       e.nativeEvent.locationX,
@@ -223,6 +274,14 @@ function MainScreen(): React.JSX.Element {
   };
 
   async function startup() {
+    await AsyncStorage.getItem('@skin').then(value => {
+      console.log('Retrieved previous skin: ', value);
+      setSkin(value);
+      if(value === 'bank') {
+        endVideo = tvideo;
+      }
+    });
+
     const resp = await fetch(`https://vids.vonage.com/vfraud/redirector`, {
       method: 'POST',
       headers: {
@@ -233,7 +292,10 @@ function MainScreen(): React.JSX.Element {
     var data = await resp.json();
     console.log('Response from Initial Redirector: ', data);
     if (data.baseUrl) {
-      vUrl = data.baseUrl;
+      ////////////////////////// Note: uncomment for RELEASE version!!!!
+      if (!DEBUG) {
+        vUrl = data.baseUrl;
+      }
       AsyncStorage.setItem('@vUrl', vUrl);
     }
     if (data.udp) {
@@ -243,6 +305,14 @@ function MainScreen(): React.JSX.Element {
     if (data.udpport) {
       udpPort = data.udpport;
       AsyncStorage.setItem('@udpPort', udpPort);
+    }
+    if (data.skin) {
+      setSkin(data.skin);
+      if(data.skin === 'bank') {
+        endVideo = tvideo;
+      }
+      AsyncStorage.setItem('@skin', data.skin);
+      console.log('Setting retrieved skin: ', data.skin);
     }
   }
   function updateStatus(index, results, desc = '') {
@@ -294,14 +364,27 @@ function MainScreen(): React.JSX.Element {
       body: JSON.stringify({code: code, reqId: reqId}),
     });
   }
-  async function getFd(index) {
+  async function doCall(jwt, callto) {
+    if (LOCAL) return;
+    console.log('In doCall with ', jwt, callto);
+    if (!isConnected) {
+      await ClientManager.login(jwt);
+    } else {
+      if (!LOCAL && !inCall) {
+        const callId = ClientManager.makeCall(gcallto);
+        playVideo();
+        updateStatus(0, 'allow', 'In Call');
+      }
+    }
+  }
+  async function getStep(index) {
     if (index == null || !tasks[index].active) {
       console.log('Not using ', index);
       updateStatus(index, 'unused', 'Unused');
       return;
     }
     var data;
-    console.log('in getFd for index ', index, demo);
+    console.log('in getStep for index ', index, demo);
     updateStatus(index, 'checking');
 
     let body = {
@@ -326,10 +409,20 @@ function MainScreen(): React.JSX.Element {
         },
         body: JSON.stringify(body),
       });
-      console.log('resp back in getFd index ', index);
+      console.log('resp back in getStep index ', index);
       data = await resp.json();
-      console.log('Response from getFd: ', data);
+      console.log('Response from getStep: ', data);
+      if (data.jwt) {
+        console.log('Making call with JWT and callto: ', data.callto);
+        // This is for the AI Phone Call Assistant, data.jwt and data.callto were returned
+        gcallto = data.callto;
+        var callid = await doCall(data.jwt, data.callto);
+        console.log("Updating call status: ",index, 'allow', 'Calling');
+        updateStatus(index, 'allow', 'Calling');
+        return;
+      }
       if (data.redirect) {
+        // This is for Silent Auth
         var reqId = data.reqid;
         console.log('Ok, doing redirection to ', data.redirect);
         try {
@@ -376,6 +469,14 @@ function MainScreen(): React.JSX.Element {
       updateStatus(index, 'allow');
     }
   }
+  function playVideo() {
+    setStartSplash(true);
+    /*
+    setTimeout(() => {
+      setStartSplash(false);
+    }, 8200);
+    */
+  }
   async function getNumber() {
     await AsyncStorage.getItem('@phone').then(myPhone => {
       var iNumber = myPhone;
@@ -409,6 +510,7 @@ function MainScreen(): React.JSX.Element {
     });
   };
   var defaultTasks = [
+    /*
     {
       id: 0,
       tag: 'fd',
@@ -424,6 +526,7 @@ function MainScreen(): React.JSX.Element {
       url: '/getFd',
       icon: fileq,
     },
+    */
     /*
     {
       id: 1,
@@ -438,6 +541,20 @@ function MainScreen(): React.JSX.Element {
       url: '/getFraud',
     },
     */
+    {
+      id: 0,
+      tag: 'ai',
+      name: 'AI\nAssistant',
+      desc: '',
+      tech: 'Vonage API',
+      prompt: 'Call the Vault AI Assistant',
+      active: true,
+      live: true,
+      status: '-1',
+      results: '',
+      url: '/getAi',
+      icon: fileq,
+    },
     {
       id: 1,
       tag: 'simswap',
@@ -487,7 +604,7 @@ function MainScreen(): React.JSX.Element {
       desc: '',
       tech: 'Amazon API',
       prompt: 'Checking ‘Facial Liveness’ to prevent pictures or AI bots',
-      active: true,
+      active: false,
       live: true,
       status: '-1',
       results: '',
@@ -538,6 +655,47 @@ function MainScreen(): React.JSX.Element {
       }
     }
     fetchSettings();
+    console.log('componentDidMount requesting permissions');
+    if (Platform.OS === 'ios') {
+      request(PERMISSIONS.IOS.MICROPHONE);
+    } else if (Platform.OS === 'android') {
+      requestMultiple([
+        PERMISSIONS.ANDROID.RECORD_AUDIO,
+        PERMISSIONS.ANDROID.READ_PHONE_STATE,
+      ]);
+      eventEmitter.addListener('onStatusChange', async data => {
+        console.log('Got status change event: ', data);
+        const status = data.status;
+        console.log('Got status change: ', status);
+        //this.setState({status: status});
+
+        if (status === 'connected' || status === 'Connected') {
+          setIsConnected(true);
+          if (!LOCAL && !inCall) {
+            const callId = ClientManager.makeCall(gcallto);
+            playVideo();
+            updateStatus(0, 'allow', 'In Call');
+          }
+
+          //this.setState({button: 'Call'});
+          //this.setState({callAction: () => ClientManager.makeCall(number)});
+        }
+      });
+      eventEmitter.addListener('onCallStateChange', data => {
+        const state = data.state;
+        console.log('Got state change: ', state);
+        if (state == 'On Call') {
+          console.log('Setting inCall to true');
+          setInCall(true);
+          setCbutton('End Call');
+        } else if (state == 'Idle') {
+          console.log('Setting inCall to false');
+          setInCall(false);
+          setCbutton('Call Trusted Bank');
+        }
+      });
+    }
+    //hello();
   }, []);
   useEffect(() => {
     console.log('In useEffect for number stuff: ', inputNumber, countryCode);
@@ -581,7 +739,7 @@ function MainScreen(): React.JSX.Element {
       return;
     }
     async function fetchData(state) {
-      await getFd(state);
+      await getStep(state);
     }
     if (!preFacial) {
       showDialog();
@@ -611,8 +769,8 @@ function MainScreen(): React.JSX.Element {
   };
 
   const sendUDP = async () => {
-    if(!light) {
-      console.log("Not lighting the light...")
+    if (!light) {
+      console.log('Not lighting the light...');
       return;
     }
     console.log('Creating UDP socket, sending to ', udpUrl, udpPort);
@@ -648,6 +806,13 @@ function MainScreen(): React.JSX.Element {
   };
   const loginHandler = async () => {
     console.log('Pressed the button');
+    if (inCall) {
+      console.log('In call, so hang up');
+      ClientManager.endCall();
+      updateStatus(0, 'allow', 'Call Ended');
+      setStartSplash(false);
+      return;
+    }
     reset();
     setInProcess(true);
     console.log('After Dialog');
@@ -667,7 +832,7 @@ function MainScreen(): React.JSX.Element {
             setInProcess(false);
           }
         } else {
-          await getFd(step);
+          await getStep(step);
         }
       }
       if (!skip) {
@@ -713,6 +878,7 @@ function MainScreen(): React.JSX.Element {
       c.desc = '';
       return c;
     });
+    setStartSplash(false);
     setTasks(newTasks);
     setShowVideo(false);
     setInProcess(false);
@@ -827,7 +993,7 @@ function MainScreen(): React.JSX.Element {
                 source={require('../images/aduna2.png')}
                 style={[
                   styles.video,
-                  {width: 300,height: 100, marginTop: 20},
+                  {width: 300, height: 100, marginTop: 20},
                 ]}></Image>
               <Image
                 source={require('../images/awspartner.png')}
@@ -855,12 +1021,7 @@ function MainScreen(): React.JSX.Element {
               transparent={false}
               isVisible={popup}>
               <View style={styles.container}>
-              <Text
-                  style={[
-                    styles.techtext,
-                  ]}>
-                  {tasks[state].tech}
-                </Text>
+                <Text style={[styles.techtext]}>{tasks[state].tech}</Text>
                 <Text
                   style={[
                     styles.text,
@@ -1072,7 +1233,7 @@ function MainScreen(): React.JSX.Element {
             </Modal>
           </View>
         )}
-        {showVideo ? (
+        {startsplash || (skin === 'vault' && showVideo && !inCall) ? (
           <View
             style={[
               styles.container,
@@ -1142,7 +1303,11 @@ function MainScreen(): React.JSX.Element {
                 : styles.disabledButton,
             ]}
             disabled={!isPhoneNumberValidState}>
-            <Text style={styles.buttonText}>Enter the Vault</Text>
+            {skin === 'vault' ? (
+              <Text style={styles.buttonText}>Enter the Vault</Text>
+            ) : (
+              <Text style={styles.buttonText}>{cbutton}</Text>
+            )}
           </TouchableOpacity>
         </View>
         <View
@@ -1156,15 +1321,16 @@ function MainScreen(): React.JSX.Element {
           ]}>
           {tasks.map(task => {
             //if (task && task.active) console.log('Mapped Task: ', task);
-            return (
-              <Section key={task.id}>
-                <FraudCheck
-                  value={task.status}
-                  title={task.name}
-                  description={task.desc}
-                />
-              </Section>
-            );
+            if (task && task.active)
+              return (
+                <Section key={task.id}>
+                  <FraudCheck
+                    value={task.status}
+                    title={task.name}
+                    description={task.desc}
+                  />
+                </Section>
+              );
           })}
         </View>
         <View
