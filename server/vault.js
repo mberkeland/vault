@@ -243,6 +243,12 @@ async function verifyRequest(reqId, code) {
   }
   return results.data;
 }
+app.post("/authenticate", (req, res) => {
+  console.log("Got AI Authentications request!!!!", req.body);
+  var date = new Date().toLocaleString();
+  return res.status(200).end();
+});
+
 app.post("/getFd", async (req, res) => {
   console.log("getFd request: ", req.body);
   var date = new Date().toLocaleString();

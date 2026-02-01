@@ -5,7 +5,7 @@
  * @format
  */
 const ver = '2.00';
-const DEBUG = true;
+const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
 import type {PropsWithChildren} from 'react';
