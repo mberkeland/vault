@@ -28,6 +28,12 @@ import {
   Dimensions,
   NativeEventEmitter,
 } from 'react-native';
+import {
+  Pusher,
+  PusherMember,
+  PusherChannel,
+  PusherEvent,
+} from '@pusher/pusher-websocket-react-native';
 
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 import BouncyCheckbox from 'react-native-bouncy-checkbox';
@@ -51,7 +57,8 @@ import Sound from 'react-native-sound';
 
 const eventEmitter = new NativeEventEmitter(NativeModules.EventEmitter);
 const {VonageVerifySilentAuthModule, ClientManager} = NativeModules;
-
+const pusher = Pusher.getInstance();
+var channel = null;
 var phone = '14083753079';
 var started = null;
 var gPhone;
@@ -277,7 +284,7 @@ function MainScreen(): React.JSX.Element {
     await AsyncStorage.getItem('@skin').then(value => {
       console.log('Retrieved previous skin: ', value);
       setSkin(value);
-      if(value === 'bank') {
+      if (value === 'bank') {
         endVideo = tvideo;
       }
     });
@@ -308,7 +315,7 @@ function MainScreen(): React.JSX.Element {
     }
     if (data.skin) {
       setSkin(data.skin);
-      if(data.skin === 'bank') {
+      if (data.skin === 'bank') {
         endVideo = tvideo;
       }
       AsyncStorage.setItem('@skin', data.skin);
@@ -416,8 +423,12 @@ function MainScreen(): React.JSX.Element {
         console.log('Making call with JWT and callto: ', data.callto);
         // This is for the AI Phone Call Assistant, data.jwt and data.callto were returned
         gcallto = data.callto;
+        if (!channel) {
+          console.log('No channel yet, initializing Pusher');
+          await initPusher(data.pkey);
+        }
         var callid = await doCall(data.jwt, data.callto);
-        console.log("Updating call status: ",index, 'allow', 'Calling');
+        console.log('Updating call status: ', index, 'allow', 'Calling');
         updateStatus(index, 'allow', 'Calling');
         return;
       }
@@ -509,6 +520,25 @@ function MainScreen(): React.JSX.Element {
       return !prev;
     });
   };
+  async function initPusher(key) {
+    console.log('Initializing Pusher for deviceId: ', deviceId);
+    await pusher.init({
+      apiKey: key,
+      cluster: 'us3',
+    });
+    channel = await pusher.subscribe({
+      channelName: 'vault-' + deviceId,
+      onEvent: event => {
+        console.log(`Got channel event: ${event}`);
+        if (event.eventName === 'authenticate') {
+          console.log('Got authenticate event, starting looper');
+          looper();
+        }
+      },
+    });
+    await pusher.connect();
+    console.log('Done setting up pusher');
+  }
   var defaultTasks = [
     /*
     {
@@ -695,7 +725,6 @@ function MainScreen(): React.JSX.Element {
         }
       });
     }
-    //hello();
   }, []);
   useEffect(() => {
     console.log('In useEffect for number stuff: ', inputNumber, countryCode);
@@ -804,22 +833,11 @@ function MainScreen(): React.JSX.Element {
     setPopup(true);
     console.log('DoneshowDialog for ', state);
   };
-  const loginHandler = async () => {
-    console.log('Pressed the button');
-    if (inCall) {
-      console.log('In call, so hang up');
-      ClientManager.endCall();
-      updateStatus(0, 'allow', 'Call Ended');
-      setStartSplash(false);
-      return;
-    }
-    reset();
-    setInProcess(true);
-    console.log('After Dialog');
+  const looper = async () => {
     var skip = false;
     if (fast) {
       console.log('Starting fast loop');
-      for (let step = 0; step < tasks.length; step++) {
+      for (let step = 1; step < tasks.length; step++) {
         console.log('Loop value: ', step);
         if (tasks[step].tag == 'facial') {
           if (tasks[step].active) {
@@ -843,6 +861,25 @@ function MainScreen(): React.JSX.Element {
       console.log('Altering state: ', state, tasks.length);
       var v = 0;
       alterState(v);
+    }
+  };
+  const loginHandler = async () => {
+    console.log('Pressed the button');
+    if (inCall) {
+      console.log('In call, so hang up');
+      ClientManager.endCall();
+      updateStatus(0, 'allow', 'Call Ended');
+      setStartSplash(false);
+      return;
+    }
+    reset();
+    setInProcess(true);
+    console.log('After Dialog');
+    if (tasks[0].active) {
+      // Special case for call first
+      await getStep(0);
+    } else {
+      looper();
     }
   };
   const onMessage = data => {

@@ -9,6 +9,7 @@ import utils from "./vutils.cjs";
 import dgram from "node:dgram";
 import fs from "fs";
 import qs from "qs";
+import Pusher from "pusher"
 
 const udpserver = dgram.createSocket("udp4");
 const v2url = "https://api.nexmo.com/v2/verify/";
@@ -41,6 +42,7 @@ udpserver.bind(41234);
 const app = express();
 const port = process.env.VCR_PORT;
 const server_url = process.env.VCR_INSTANCE_PUBLIC_URL;
+const vcrstate = vcr.getInstanceState();
 
 console.log("Starting up MWC version with URL = " + server_url);
 let gnids;
@@ -55,7 +57,8 @@ var vonage;
 var users = [];
 var requests = [];
 var ws_url = process.env.diana ? "wss://" + process.env.diana : "wss://neru-ef3346a6-v2sonic-v2sonic.use1.runtime.vonage.cloud"; //wsprefix + server_url.slice(5); // https://
-
+var pkey;
+var pusher;
 app.use(express.json());
 app.use(express.static("public"));
 app.use(function (req, res, next) {
@@ -132,7 +135,17 @@ async function startup() {
     users[vid] = result;
     users[vid].id = vid;
     users[vid].request_id = null;
-
+    if(result.pusher_key) {
+      console.log("Got pusher key: ", result.pusher_key);
+      pkey = result.pusher_key;
+      pusher = new Pusher({
+        appId: result.pusher_id,
+        key: result.pusher_key,
+        secret: result.pusher_secret,
+        useTLS: true, // optional, defaults to false
+        cluster: "us3"
+      });
+    }
     vonage = new Vonage(
       {
         apiKey: result.key,
@@ -243,9 +256,19 @@ async function verifyRequest(reqId, code) {
   }
   return results.data;
 }
-app.post("/authenticate", (req, res) => {
+app.post("/authenticate", async (req, res) => {
   console.log("Got AI Authentications request!!!!", req.body);
   var date = new Date().toLocaleString();
+  if(req.body.sessionId) {
+    var stuff = await vcrstate.get('' + req.body.sessionId);
+    if(stuff){
+      stuff.action="authenticate";
+      stuff.sessionId = req.body.sessionId ;
+      stuff.reason = req.body.reason ;
+      pusher.trigger('vault-' + stuff.deviceId, "authenticate", stuff);
+      console.log("Sent authenticate pusher event to device: ", stuff);
+    }
+  }
   return res.status(200).end();
 });
 
@@ -513,6 +536,7 @@ app.post("/getAi", async (req, res) => {
   var date = new Date().toLocaleString();
   var phone = req.body.phone.replace(/\D/g, "");
   var results = "allow";
+  var deviceId = req.body.id;
   var jwt = null;
   if (!phone) {
     console.log("No phone passed in.");
@@ -546,8 +570,20 @@ await  vonage.users.getUser(phone)
   .catch((error) => console.error(error));
   }
 );
+/*
+    setTimeout(() => {
+      console.log("Sending pusher event to deviceId: ", deviceId);
+    pusher.trigger('vault-' + deviceId, "event", { event: 'test' });
+    }, 2000);
+*/
+
 var ai = "30";//"19895281169";
-  return res.status(200).json({ results: results, jwt: jwt, callto: ai  });
+await vcrstate.set('' + phone, { deviceId: deviceId, phone:phone })
+console.log("Set vcrstate for phone ", phone, " to deviceId: ", deviceId);
+      var stuff = await vcrstate.get('' + phone);
+      console.log("vcrstate get returned: ", stuff, stuff.phone);
+
+return res.status(200).json({ results: results, jwt: jwt, callto: ai, pkey: pkey  });
 });
 
 app.post("/getFacial", (req, res) => {
@@ -640,6 +676,13 @@ app.get("/answer", async (req, res) => {
       */
       ]
     console.log("Returning answer ncco: ", ncco);
+          var stuff = await vcrstate.get('' + req.query.from_user);
+          if(stuff){
+            stuff.uuid = uuid;
+            await vcrstate.set('' + uuid, stuff);
+            console.log("Updated vcrstate for phone ", req.query.from_user, stuff);
+          }
+
   return res.status(200).json(ncco);
 });
 app.post("/event", async (req, res) => {
