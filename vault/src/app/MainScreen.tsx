@@ -364,7 +364,7 @@ function MainScreen(): React.JSX.Element {
       if (i === index) {
         c.status = status;
         c.desc = description;
-        c.icon = file;        
+        c.icon = file;
         return c;
       } else {
         // The rest haven't changed
@@ -799,6 +799,14 @@ function MainScreen(): React.JSX.Element {
     bcolor = '#ECFFDC'; // Good
     setShowVideo(true);
     console.log('Show Video set to true');
+    var obj = {};
+    obj.name='Verification';
+    obj.results = "done";
+    obj.desc = "Verified";
+    obj.status = "1";
+    obj.deviceId = deviceId;
+    obj.phone = '' + gPhone;
+    sendResults(obj);
   }, [done]);
 
   useEffect(() => {
