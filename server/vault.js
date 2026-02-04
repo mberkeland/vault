@@ -259,17 +259,22 @@ async function verifyRequest(reqId, code) {
 app.post("/authenticate", async (req, res) => {
   console.log("Got AI Authentications request!!!!", req.body);
   var date = new Date().toLocaleString();
+  var methods=[];
   if(req.body.sessionId) {
     var stuff = await vcrstate.get('' + req.body.sessionId);
     if(stuff){
       stuff.action="authenticate";
       stuff.sessionId = req.body.sessionId ;
-      stuff.reason = req.body.reason ;
-      pusher.trigger('vault-' + stuff.deviceId, "authenticate", stuff);
+      stuff.reason = req.body.reason;
+      await pusher.trigger('vault-' + stuff.deviceId, "authenticate", stuff);
+    setTimeout(() => {
       console.log("Sent authenticate pusher event to device: ", stuff);
+      pusher.trigger('nova', "event", stuff);
+    },1000);
+      methods=stuff.methods
     }
   }
-  return res.status(200).end();
+  return res.status(200).json({ methods: methods }).end();
 });
 
 app.post("/getFd", async (req, res) => {
@@ -299,7 +304,7 @@ app.post("/getFd", async (req, res) => {
       subsystem: "prefix",
       risk_attributes: [],
     };
-    return res.status(200).json({ results: action, data: results });
+    return res.status(200).json({ results: action, data: results }).end();
   }
   try {
     results = await axios.post(
@@ -319,7 +324,7 @@ app.post("/getFd", async (req, res) => {
   } catch (err) {
     console.log("getDefender error", err);
   }
-  return res.status(200).json({ results: action, data: results.data });
+  return res.status(200).json({ results: action, data: results.data }).end();
 });
 app.post("/getFraud", async (req, res) => {
   console.log("getFraud request: ", req.body);
@@ -340,7 +345,7 @@ app.post("/getFraud", async (req, res) => {
     results = {
       action: "allow",
     };
-    return res.status(200).json({ results: action, data: results });
+    return res.status(200).json({ results: action, data: results }).end();
   }
   var body = {
     type: "phone",
@@ -369,7 +374,7 @@ app.post("/getFraud", async (req, res) => {
     return { error: err.data?.response };
   }
 
-  return res.status(200).json({ results: action, data: results.data });
+  return res.status(200).json({ results: action, data: results.data }).end();
 });
 app.post("/getSimswap", async (req, res) => {
   console.log("getSimswap request: ", req.body);
@@ -390,7 +395,7 @@ app.post("/getSimswap", async (req, res) => {
     results = {
       action: "allow",
     };
-    return res.status(200).json({ results: action, data: results });
+    return res.status(200).json({ results: action, data: results }).end();
   }
   if (
     phone.startsWith("x49") ||
@@ -402,7 +407,7 @@ app.post("/getSimswap", async (req, res) => {
     if (ss == 'invalid') {
       action = 'warning'
     }
-    return res.status(200).json({ results: action, data: ss });
+    return res.status(200).json({ results: action, data: ss }).end();
   }
   var body = {
     type: "phone",
@@ -470,7 +475,7 @@ app.post("/getSimswap", async (req, res) => {
     return { error: err.data?.response };
   }
 
-  return res.status(200).json({ results: action, data: results.data });
+  return res.status(200).json({ results: action, data: results.data }).end();
 });
 app.post("/getNv", async (req, res) => {
   console.log("getNv request: ", req.body);
@@ -529,7 +534,7 @@ app.post("/getLocation", async (req, res) => {
       results = 'block'
     }
   }
-  return res.status(200).json({ results: results });
+  return res.status(200).json({ results: results }).end();
 });
 app.post("/getAi", async (req, res) => {
   console.log("getAi request: ", req.body);
@@ -537,6 +542,7 @@ app.post("/getAi", async (req, res) => {
   var phone = req.body.phone.replace(/\D/g, "");
   var results = "allow";
   var deviceId = req.body.id;
+  var methods = req.body.methods;
   var jwt = null;
   if (!phone) {
     console.log("No phone passed in.");
@@ -578,12 +584,12 @@ await  vonage.users.getUser(phone)
 */
 
 var ai = "30";//"19895281169";
-await vcrstate.set('' + phone, { deviceId: deviceId, phone:phone })
+await vcrstate.set('' + phone, { deviceId: deviceId, phone:phone, methods: methods })
 console.log("Set vcrstate for phone ", phone, " to deviceId: ", deviceId);
       var stuff = await vcrstate.get('' + phone);
       console.log("vcrstate get returned: ", stuff, stuff.phone);
 
-return res.status(200).json({ results: results, jwt: jwt, callto: ai, pkey: pkey  });
+return res.status(200).json({ results: results, jwt: jwt, callto: ai, pkey: pkey  }).end();
 });
 
 app.post("/getFacial", (req, res) => {
@@ -593,7 +599,7 @@ app.post("/getFacial", (req, res) => {
     console.log("No phone passed in.");
     return res.status(200).end();
   }
-  return res.status(200).json({ results: "allow" });
+  return res.status(200).json({ results: "allow" }).end();
 });
 async function getSS2(phone) {
   const jwt = tokenGenerate(users[sid].app_id, users[sid].keyfile, {});
@@ -650,7 +656,12 @@ app.get("/answer", async (req, res) => {
   var date = new Date().toLocaleString();
   var uuid = req.query.uuid
   var promptId = req.query.to;
-  let url = ws_url + "/socket?uid=" + uuid + "&streamid=" + uuid + "&orig_uuid=" + uuid + "&region=us&promptId=" + promptId + "&video=1&usefilter=" + 1
+  var stream = req.query.streamid;
+  var stuff = await vcrstate.get('' + req.query.from_user);
+  if(stuff && stuff.deviceId) {
+    stream = stuff.deviceId;
+  }
+  let url = ws_url + "/socket?uid=" + uuid + "&streamid=" + stream + "&orig_uuid=" + uuid + "&region=us&promptId=" + promptId + "&video=1&usefilter=" + 1
   var ncco =     [
            {
          action: "connect",
@@ -676,19 +687,24 @@ app.get("/answer", async (req, res) => {
       */
       ]
     console.log("Returning answer ncco: ", ncco);
-          var stuff = await vcrstate.get('' + req.query.from_user);
-          if(stuff){
-            stuff.uuid = uuid;
-            await vcrstate.set('' + uuid, stuff);
-            console.log("Updated vcrstate for phone ", req.query.from_user, stuff);
-          }
+    if(stuff){
+      stuff.uuid = uuid;
+      await vcrstate.set('' + uuid, stuff);
+      console.log("Updated vcrstate for phone ", req.query.from_user, stuff);
+    }
 
-  return res.status(200).json(ncco);
+  return res.status(200).json(ncco).end();
+});
+app.post("/stepResults", async (req, res) => {
+  console.log("Step Results: ", req.body);
+  var date = new Date().toLocaleString();
+  pusher.trigger('nova', "event", req.body);
+  return res.status(200).end();
 });
 app.post("/event", async (req, res) => {
   console.log("vapi event webhook: ", req.body);
   var date = new Date().toLocaleString();
-  return res.status(200);
+  return res.status(200).end();
 });
 async function createCamara(phoneNumber, uuid, sandbox = false) {
   console.log(
@@ -935,7 +951,7 @@ app.all("/nverify", async (req, res) => {
     console.log("Camara nverify token request error: ", err);
     okay = false;
   }
-  return res.status(200).json({ results: okay });
+  return res.status(200).json({ results: okay }).end();
 });
 
 startup();

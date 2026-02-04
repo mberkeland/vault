@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.00';
+const ver = '2.01';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -79,7 +79,7 @@ const filee = require('../images/exclamation.png');
 const filel = require('../images/loading.gif');
 var deviceId;
 var myLoc;
-var gcallto;
+var gcallto = 30;
 var bedrock =
   'Warning!\n\nBack-end AI processing indicates fraud pattern; this transaction halted.';
 getUniqueId().then(id => {
@@ -131,7 +131,7 @@ function hello() {
 function MainScreen(): React.JSX.Element {
   const isDarkMode = false; //useColorScheme() === 'dark';
   const doDebug = async inp => {
-    console.log('Inp: ', inp);
+    //console.log('Inp: ', inp);
     let body = inp;
     body.product = 'vault';
     if (typeof inp === 'string') {
@@ -140,7 +140,7 @@ function MainScreen(): React.JSX.Element {
     }
     body.version = '' + ver;
     body.phone = '' + gPhone;
-    console.log('Debug: ', body);
+    //console.log('Debug: ', body);
     try {
       fetch('https://vids.vonage.com/vfraud/debugNV', {
         method: 'POST',
@@ -321,13 +321,17 @@ function MainScreen(): React.JSX.Element {
       AsyncStorage.setItem('@skin', data.skin);
       console.log('Setting retrieved skin: ', data.skin);
     }
+    if (data.prompt) {
+      gcallto = data.prompt;
+      AsyncStorage.setItem('@callto', gcallto);
+    }
   }
   function updateStatus(index, results, desc = '') {
     var status = -1;
     var file = fileq;
     var description = desc;
     if (!description.length) description = results;
-    console.log('Setting results ', results);
+    console.log('Setting results ', results, index);
     if (results == 'allow') {
       status = 1;
       file = filec;
@@ -349,11 +353,18 @@ function MainScreen(): React.JSX.Element {
       status = -1;
       file = fileq;
     }
+    var obj = tasks[index];
+    obj.results = results;
+    obj.desc = description;
+    obj.status = status;
+    obj.deviceId = deviceId;
+    obj.phone = '' + gPhone;
+    sendResults(obj);
     const newTasks = tasks.map((c, i) => {
       if (i === index) {
         c.status = status;
         c.desc = description;
-        c.icon = file;
+        c.icon = file;        
         return c;
       } else {
         // The rest haven't changed
@@ -369,6 +380,15 @@ function MainScreen(): React.JSX.Element {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({code: code, reqId: reqId}),
+    });
+  }
+  async function sendResults(obj) {
+    const resp = fetch(vUrl + '/stepResults', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(obj),
     });
   }
   async function doCall(jwt, callto) {
@@ -401,9 +421,18 @@ function MainScreen(): React.JSX.Element {
       sandbox: sandbox,
       demo: demo,
     };
-    if (tasks[index].tag == 'location') {
+    if (index == 0 || tasks[index].tag == 'location') {
       console.log('Adding location to request body: ', myLoc);
       body.location = myLoc;
+      var methods = [];
+      if (!index) {
+        tasks.map(task => {
+          if (task.id && task.active) {
+            methods.push(task.name.replace('\n', ' '));
+          }
+        });
+      }
+      body.methods = methods;
     }
     if (!demo) {
       if (sandbox && tasks[index].tag == 'nv') {
@@ -420,14 +449,14 @@ function MainScreen(): React.JSX.Element {
       data = await resp.json();
       console.log('Response from getStep: ', data);
       if (data.jwt) {
-        console.log('Making call with JWT and callto: ', data.callto);
+        console.log('Making call with JWT and callto: ', gcallto);
         // This is for the AI Phone Call Assistant, data.jwt and data.callto were returned
-        gcallto = data.callto;
+        //        gcallto = data.callto;
         if (!channel) {
           console.log('No channel yet, initializing Pusher');
           await initPusher(data.pkey);
         }
-        var callid = await doCall(data.jwt, data.callto);
+        var callid = await doCall(data.jwt, gcallto);
         console.log('Updating call status: ', index, 'allow', 'Calling');
         updateStatus(index, 'allow', 'Calling');
         return;
@@ -443,7 +472,7 @@ function MainScreen(): React.JSX.Element {
               true,
             );
           const openCheckResponse = JSON.parse(jopenCheckResponse);
-          console.log('Redirect response: ', openCheckResponse);
+          //console.log('Redirect response: ', openCheckResponse);
           doDebug({type: 'checkResponse', checkResponse: openCheckResponse});
           if (openCheckResponse.http_status > 299) {
             updateStatus(index, 'block', 'Invalid number');
@@ -602,7 +631,7 @@ function MainScreen(): React.JSX.Element {
     {
       id: 2,
       tag: 'nv',
-      name: 'Number\nVerification',
+      name: 'Silent\nAuth',
       desc: '',
       tech: 'Network API',
       prompt: 'Silently verifying that this phone is the number expected',
@@ -629,6 +658,21 @@ function MainScreen(): React.JSX.Element {
     },
     {
       id: 4,
+      tag: 'fd',
+      name: 'Fraud\nDefender',
+      desc: '',
+      tech: 'Vonage API',
+      prompt: 'Using Vonage Fraud APIs to check for likely fraudulent numbers',
+      active: true,
+      live: true,
+      status: '-1',
+      results: '',
+      url: '/getFd',
+      icon: fileq,
+    },
+
+    /*    {
+      id: 4,
       tag: 'facial',
       name: 'Facial\nLiveness',
       desc: '',
@@ -641,6 +685,7 @@ function MainScreen(): React.JSX.Element {
       url: '/getFacial',
       icon: fileq,
     },
+*/
   ];
   var copyTasks = [...defaultTasks];
   const [tasks, setTasks] = useState(copyTasks);
