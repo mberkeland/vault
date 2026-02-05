@@ -4,10 +4,11 @@
  *
  * @format
  */
-const ver = '2.01';
+const ver = '2.02';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
+//import {AudioDeviceInfo, AudioManager} from 'react-native-audio-api';
 import type {PropsWithChildren} from 'react';
 import {
   SafeAreaView,
@@ -398,8 +399,9 @@ function MainScreen(): React.JSX.Element {
       await ClientManager.login(jwt);
     } else {
       if (!LOCAL && !inCall) {
+        //ClientManager.setCommunicationDevices();
         const callId = ClientManager.makeCall(gcallto);
-        playVideo();
+        //playVideo();
         updateStatus(0, 'allow', 'In Call');
       }
     }
@@ -748,7 +750,7 @@ function MainScreen(): React.JSX.Element {
           setIsConnected(true);
           if (!LOCAL && !inCall) {
             const callId = ClientManager.makeCall(gcallto);
-            playVideo();
+            //playVideo();
             updateStatus(0, 'allow', 'In Call');
           }
 
@@ -1323,7 +1325,7 @@ function MainScreen(): React.JSX.Element {
             </Modal>
           </View>
         )}
-        {startsplash || (skin === 'vault' && showVideo && !inCall) ? (
+        {startsplash || (showVideo) ? (
           <View
             style={[
               styles.container,
