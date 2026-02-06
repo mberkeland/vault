@@ -63,6 +63,7 @@ var channel = null;
 var phone = '14083753079';
 var started = null;
 var gPhone;
+var gFailure;
 var vUrl = DEBUG
   ? 'https://neru-ef3346a6-debug-vault.use1.runtime.vonage.cloud'
   : 'https://neru-ef3346a6-vault-vault.use1.runtime.vonage.cloud';
@@ -245,6 +246,8 @@ function MainScreen(): React.JSX.Element {
   const [inCall, setInCall] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [startsplash, setStartSplash] = useState(false);
+  const [failure, setFailure] = useState(false);
+  console.log('Render with state: ', state, 'failure: ', failure);
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 265;
 
@@ -440,15 +443,22 @@ function MainScreen(): React.JSX.Element {
       if (sandbox && tasks[index].tag == 'nv') {
         body.phone = '990' + gPhone.substring(gPhone.length - 10);
       }
-      const resp = await fetch(vUrl + tasks[index].url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      console.log('resp back in getStep index ', index);
-      data = await resp.json();
+      if(tasks[index].tag == 'nv') console.log('Will I be forcing failure for Silent Auth? : ',failure, gFailure, tasks[index].tag);
+      if (gFailure && (tasks[index].tag == 'nv')) {
+        await sleep(delay);
+        updateStatus(index, 'block', 'Unable to verify');
+        return;
+      } else {
+        const resp = await fetch(vUrl + tasks[index].url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+        console.log('resp back in getStep index ', index);
+        data = await resp.json();
+      }
       console.log('Response from getStep: ', data);
       if (data.jwt) {
         console.log('Making call with JWT and callto: ', gcallto);
@@ -707,6 +717,12 @@ function MainScreen(): React.JSX.Element {
       if (val === 'true') {
         setSandbox(true);
       }
+      val = await AsyncStorage.getItem('failure');
+      if (val === 'true') {
+        setFailure(true);
+        console.log("Initial setting of failure to true from async storage");
+        gFailure = true;
+      }
       val = await AsyncStorage.getItem('light');
       if (val === 'false') {
         setLight(false);
@@ -799,13 +815,25 @@ function MainScreen(): React.JSX.Element {
     setFacial(false);
     //bcolor ='rgba( 255, 0, 0, 0.4)'; // Failure
     bcolor = '#ECFFDC'; // Good
+    var good = true;
+    tasks.map(task => {
+      console.log('Task results: ', task.name, task.results, task.active);
+      if (task.active && task.results != 'allow') {
+        good = false;
+      }
+    })
+    if(good) {
+      endVideo = vvideo;
+    } else {
+      endVideo = rvideo;
+    }
     setShowVideo(true);
     console.log('Show Video set to true');
     var obj = {};
-    obj.name='Verification';
-    obj.results = "done";
-    obj.desc = "Verified";
-    obj.status = "1";
+    obj.name = 'Verification';
+    obj.results = 'done';
+    obj.desc = 'Verified';
+    obj.status = '1';
     obj.deviceId = deviceId;
     obj.phone = '' + gPhone;
     sendResults(obj);
@@ -846,6 +874,10 @@ function MainScreen(): React.JSX.Element {
     AsyncStorage.setItem('demo', '' + demo);
     AsyncStorage.setItem('sandbox', '' + sandbox);
     AsyncStorage.setItem('light', '' + light);
+    AsyncStorage.setItem('failure', '' + failure);
+    setFailure(failure);
+    gFailure = failure;
+    AsyncStorage.setItem('sandbox', '' + sandbox);
     tasks.map(task => {
       console.log('Setting: ', task.tag, task.active);
       AsyncStorage.setItem(task.tag, '' + task.active);
@@ -1252,28 +1284,29 @@ function MainScreen(): React.JSX.Element {
                   }
                 }}
               />
-              <BouncyCheckbox
-                key={-3}
-                size={30}
-                text={'Use Playground'}
-                isChecked={sandbox}
-                innerIconStyle={{borderWidth: 4}}
-                textStyle={{
-                  textDecorationLine: 'none',
-                  fontSize: 30,
-                }}
-                style={{
-                  width: '90%',
-                  marginTop: 10,
-                  marginLeft: -10,
-                }}
-                onPress={(isChecked: boolean) => {
-                  setSandbox(isChecked);
-                  if (isChecked) {
-                    setDemo(false);
-                  }
-                }}
-              />
+              {
+                <BouncyCheckbox
+                  key={-3}
+                  size={30}
+                  text={'Fail Silent Auth'}
+                  isChecked={failure}
+                  innerIconStyle={{borderWidth: 4}}
+                  textStyle={{
+                    textDecorationLine: 'none',
+                    fontSize: 30,
+                  }}
+                  style={{
+                    width: '90%',
+                    marginTop: 10,
+                    marginLeft: -10,
+                  }}
+                  onPress={(isChecked: boolean) => {
+                    console.log("Setting failure in gui to ", isChecked);
+                    setFailure(isChecked);
+                    gFailure = isChecked;
+                  }}
+                />
+              }
               <BouncyCheckbox
                 key={-4}
                 size={30}
@@ -1297,21 +1330,22 @@ function MainScreen(): React.JSX.Element {
               {tasks.map(task => {
                 var name = task.name.replace(/\n/g, ' ');
                 return (
-                  <BouncyCheckbox
-                    key={task.id}
-                    size={25}
-                    text={'Use ' + name}
-                    isChecked={task.active}
-                    innerIconStyle={{borderWidth: 4}}
-                    textStyle={{
-                      textDecorationLine: 'none',
-                      fontSize: 25,
-                    }}
-                    style={{width: '90%', marginTop: 16, marginLeft: 20}}
-                    onPress={(isChecked: boolean) => {
-                      task.active = isChecked;
-                    }}
-                  />
+                  <View>
+                    <BouncyCheckbox
+                      key={task.id}
+                      size={25}
+                      text={'Use ' + name}
+                      isChecked={task.active}
+                      innerIconStyle={{borderWidth: 4}}
+                      textStyle={{
+                        textDecorationLine: 'none',
+                        fontSize: 25,
+                      }}
+                      style={{width: '90%', marginTop: 16, marginLeft: 20}}
+                      onPress={(isChecked: boolean) => {
+                        task.active = isChecked;
+                      }}></BouncyCheckbox>
+                  </View>
                 );
               })}
               <View style={{width: 100, marginTop: 30}}>
@@ -1325,7 +1359,7 @@ function MainScreen(): React.JSX.Element {
             </Modal>
           </View>
         )}
-        {startsplash || (showVideo) ? (
+        {startsplash || showVideo ? (
           <View
             style={[
               styles.container,
@@ -1415,7 +1449,7 @@ function MainScreen(): React.JSX.Element {
             //if (task && task.active) console.log('Mapped Task: ', task);
             if (task && task.active)
               return (
-                <Section key={task.id}>
+                <Section key={100+task.id}>
                   <FraudCheck
                     value={task.status}
                     title={task.name}

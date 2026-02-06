@@ -149,6 +149,13 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
     marginRight: 20,
   },
+    tinyIcon: {
+    width: 14,
+    height: 14,
+    marginBottom: 10,
+    marginRight: 10,
+  },
+
   video: {
     width: '100%',
     height: 228,
