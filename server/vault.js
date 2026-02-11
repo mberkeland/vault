@@ -206,6 +206,7 @@ async function startup() {
     users[sid].id = vid;
     users[sid].request_id = null;
   });
+  if(!process.env.VCR_INSTANCE_PUBLIC_URL.includes("-debug-")) {
   let interval = setInterval(() => {
     axios
       .get(`${process.env.VCR_INSTANCE_PUBLIC_URL}/keepalive`)
@@ -214,6 +215,7 @@ async function startup() {
       })
       .catch((err) => console.log("VCR interval error:", err.code));
   }, 30000);
+  }
   await getSB(sbox);
   console.log("****************************** TEF Location")
   var lat = 40.44509;
@@ -274,9 +276,39 @@ app.post("/authenticate", async (req, res) => {
       methods=stuff.methods
     }
   }
+//  setTimeout(() => {
   return res.status(200).json({ methods: methods }).end();
+//  }, 5000);
 });
-
+app.post("/checkAuthentication", async (req, res) => {
+  console.log("Got AI checkAuthentication request!!!!", req.body);
+  var date = new Date().toLocaleString();
+  var counter = 0;
+  let interval = setInterval(async () => {
+//  setTimeout(async () => {
+    var methods=[];
+    var obj = {}
+    if(req.body.sessionId) {
+      var stuff = await vcrstate.get('' + req.body.sessionId);
+      if(stuff){
+        console.log("got Stuff on checkAuthentication",stuff)
+        obj = stuff;
+        if(Object.hasOwn(obj,"result") && (obj.count>=obj.methods.length)) {
+          clearInterval(interval);
+          console.log("Returning Got AI checkAuthentication request",obj);
+          return res.status(200).json(obj).end();
+        } else {
+          console.log("Not eneough steps finished yet.. keep waiting")
+        }
+      } else {
+      }
+    }
+    if(counter++ > 4) {
+          clearInterval(interval);
+          return res.status(200).json({result: 'block', reason: 'unable to run verification checks'}).end();
+        }
+  },1000);
+});
 app.post("/getFd", async (req, res) => {
   console.log("getFd request: ", req.body);
   var date = new Date().toLocaleString();
@@ -583,13 +615,13 @@ await  vonage.users.getUser(phone)
     }, 2000);
 */
 
-var ai = "30";//"19895281169";
-await vcrstate.set('' + phone, { deviceId: deviceId, phone:phone, methods: methods })
-console.log("Set vcrstate for phone ", phone, " to deviceId: ", deviceId);
-      var stuff = await vcrstate.get('' + phone);
-      console.log("vcrstate get returned: ", stuff, stuff.phone);
+  var ai = "30";//"19895281169";
+  await vcrstate.set('' + phone, { deviceId: deviceId, phone:phone, methods: methods })
+  console.log("Set vcrstate for phone ", phone, " to deviceId: ", deviceId);
+  var stuff = await vcrstate.get('' + phone);
+  console.log("vcrstate get returned: ", stuff, stuff.phone);
 
-return res.status(200).json({ results: results, jwt: jwt, callto: ai, pkey: pkey  }).end();
+  return res.status(200).json({ results: results, jwt: jwt, callto: ai, pkey: pkey  }).end();
 });
 
 app.post("/getFacial", (req, res) => {
@@ -689,16 +721,46 @@ app.get("/answer", async (req, res) => {
     console.log("Returning answer ncco: ", ncco);
     if(stuff){
       stuff.uuid = uuid;
-      await vcrstate.set('' + uuid, stuff);
+      await vcrstate.set('' + uuid, stuff).then(() => {
+        vcrstate.expire('' + uuid, 300);
+        console.log("UUID state expiration set: ", uuid)
+      })
       console.log("Updated vcrstate for phone ", req.query.from_user, stuff);
     }
-
   return res.status(200).json(ncco).end();
 });
 app.post("/stepResults", async (req, res) => {
   console.log("Step Results: ", req.body);
   var date = new Date().toLocaleString();
   pusher.trigger('nova', "event", req.body);
+  if(req.body.sessionId) {
+    var validRes = ["allow","block"]
+    var stuff = await vcrstate.get('' + req.body.sessionId);
+    if(!stuff) {
+      console.log("No stuff, returning");
+      return res.status(200).end();
+    }
+    console.log("Doing the big check: ",req.body.id>0 ,  validRes.includes(req.body.results?.toLowerCase()), (req.body.id>0) && (validRes.includes(req.body.results?.toLowerCase())))
+    if((req.body.id>0) && (validRes.includes(req.body.results?.toLowerCase()))) {
+      var name = req.body.name.replace('\n', ' ');
+      stuff.name = name;
+      console.log("Are we processing the auth now? ",stuff)
+      if(!stuff.count) {
+        stuff.count=1;
+      } else {
+        stuff.count++;
+      }
+      if(!stuff.result || req.body.results == 'block') {
+        stuff.result = req.body.results;
+      }
+      console.log("Setting new stuff: ",stuff)
+      await vcrstate.set(req.body.sessionId, stuff).then(() => {
+        vcrstate.expire(req.body.sessionId, 300);
+        console.log("stepResults state expiration set: ", req.body.sessionId)
+      })
+    }
+    console.log("Got stuff on stepResults: ",stuff)
+  }
   return res.status(200).end();
 });
 app.post("/event", async (req, res) => {

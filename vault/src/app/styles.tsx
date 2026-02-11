@@ -37,13 +37,12 @@ export const styles = StyleSheet.create({
     marginBottom: -10,
   },
   logo2: {
-    opacity: .8,
+    opacity: 0.8,
     overflow: 'visible',
     resizeMode: 'contain',
     marginLeft: 0,
     marginBottom: 1,
     marginTop: -10,
-
   },
   text: {
     fontSize: 30,
@@ -100,6 +99,19 @@ export const styles = StyleSheet.create({
   citem: {
     marginTop: 10,
   },
+  rbutton: {
+    marginRight: 40,
+    marginLeft: 40,
+    marginTop: 10,
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingLeft: 20,
+    paddingRight: 20,
+    backgroundColor: '#14456e',
+    borderRadius: 10, // Adjust this value for desired roundness
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
   buttonText: {
     fontWeight: 'bold',
     color: 'white',
@@ -137,6 +149,13 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'aliceblue',
   },
+  front: {
+    flex: 1, // Makes the image background cover the entire modal area
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
+  },
   buttonContainer: {
     flex: 1, // Take up the remaining space
     justifyContent: 'flex-end', // Align content to the bottom
@@ -149,7 +168,7 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
     marginRight: 20,
   },
-    tinyIcon: {
+  tinyIcon: {
     width: 14,
     height: 14,
     marginBottom: 10,
@@ -181,5 +200,22 @@ export const styles = StyleSheet.create({
   ver: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  absoluteText: {
+    position: 'absolute', // Positions the text absolutely [5]
+    left: 10, // Distance from the left edge
+    bottom: 10, // Distance from the bottom edge
+    // Add any specific text styling here (color, font size, etc.)
+    fontSize: 14,
+    color: 'white',
+  },
+  absoluteSettings: {
+    position: 'absolute', // Positions the text absolutely [5]
+    width: 34,
+    height: 34,
+    right: 10, // Distance from the left edge
+    bottom: 10, // Distance from the bottom edge
+    // Add any specific text styling here (color, font size, etc.)
+    color: 'white',
   },
 });

@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.02';
+const ver = '2.06';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -52,6 +52,7 @@ import Video from 'react-native-video';
 import vvideo from '../images/vault.mp4';
 import rvideo from '../images/tluav.mp4';
 import tvideo from '../images/TBVault.mp4';
+import tvideof from '../images/TBVaultFail.mp4';
 import bedimage from '../images/bedrock.jpg';
 import {request, requestMultiple, PERMISSIONS} from 'react-native-permissions';
 import Sound from 'react-native-sound';
@@ -72,7 +73,7 @@ var faceUrl = 'https://main.d3sn8is0cbxe5o.amplifyapp.com';
 var udpUrl = '10.47.111.20';
 var udpPort = 50000;
 var bcolor = '#ECFFDC';
-var endVideo = vvideo;
+var endVideo = tvideo;
 const filex = require('../images/redx2.gif');
 const fileq = require('../images/qmark.png');
 const filec = require('../images/greencheck1.gif');
@@ -88,7 +89,7 @@ getUniqueId().then(id => {
   deviceId = id;
   console.log('Initialized deviceId: ', deviceId);
 });
-
+var sessionId = '';
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
@@ -168,12 +169,12 @@ function MainScreen(): React.JSX.Element {
         source={
           skin === 'vault'
             ? require('../images/vonage_logo.png')
-            : require('../images/TB2.png')
+            : require('../images/TBLogo-B.png')
         }
         style={[
           styles.background,
           {
-            backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+            backgroundColor: isDarkMode ? Colors.darker : '#DFC5FE', //lightblue
           },
         ]}
         imageStyle={skin === 'vault' ? styles.logo : styles.logo2}>
@@ -247,6 +248,8 @@ function MainScreen(): React.JSX.Element {
   const [isConnected, setIsConnected] = useState(false);
   const [startsplash, setStartSplash] = useState(false);
   const [failure, setFailure] = useState(false);
+  const [front, setFront] = useState(true);
+  const [deeper, setDeeper] = useState(false);
   console.log('Render with state: ', state, 'failure: ', failure);
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 265;
@@ -363,6 +366,7 @@ function MainScreen(): React.JSX.Element {
     obj.status = status;
     obj.deviceId = deviceId;
     obj.phone = '' + gPhone;
+    obj.sessionId = sessionId;
     sendResults(obj);
     const newTasks = tasks.map((c, i) => {
       if (i === index) {
@@ -404,6 +408,7 @@ function MainScreen(): React.JSX.Element {
       if (!LOCAL && !inCall) {
         //ClientManager.setCommunicationDevices();
         const callId = ClientManager.makeCall(gcallto);
+        console.log('CallId 2: ', callId);
         //playVideo();
         updateStatus(0, 'allow', 'In Call');
       }
@@ -443,8 +448,14 @@ function MainScreen(): React.JSX.Element {
       if (sandbox && tasks[index].tag == 'nv') {
         body.phone = '990' + gPhone.substring(gPhone.length - 10);
       }
-      if(tasks[index].tag == 'nv') console.log('Will I be forcing failure for Silent Auth? : ',failure, gFailure, tasks[index].tag);
-      if (gFailure && (tasks[index].tag == 'nv')) {
+      if (tasks[index].tag == 'nv')
+        console.log(
+          'Will I be forcing failure for Silent Auth? : ',
+          failure,
+          gFailure,
+          tasks[index].tag,
+        );
+      if (gFailure && tasks[index].tag == 'nv') {
         await sleep(delay);
         updateStatus(index, 'block', 'Unable to verify');
         return;
@@ -468,9 +479,9 @@ function MainScreen(): React.JSX.Element {
           console.log('No channel yet, initializing Pusher');
           await initPusher(data.pkey);
         }
-        var callid = await doCall(data.jwt, gcallto);
         console.log('Updating call status: ', index, 'allow', 'Calling');
         updateStatus(index, 'allow', 'Calling');
+        var callid = await doCall(data.jwt, gcallto);
         return;
       }
       if (data.redirect) {
@@ -570,9 +581,18 @@ function MainScreen(): React.JSX.Element {
     channel = await pusher.subscribe({
       channelName: 'vault-' + deviceId,
       onEvent: event => {
-        console.log(`Got channel event: ${event}`);
-        if (event.eventName === 'authenticate') {
-          console.log('Got authenticate event, starting looper');
+        console.log('raw event data: ', event);
+        const data = JSON.parse(event.data);
+        //var data = event.data;
+        console.log(`Got channel event data:`, data);
+        if (data) {
+          console.log('event data sessionId: ', data.sessionId, data.uuid);
+          sessionId = data.sessionId;
+          console.log('Got sessionId: ', sessionId);
+        }
+        if (data.action == 'authenticate') {
+          //event.eventName ===
+          console.log('Got authenticate event, starting looper ');
           looper();
         }
       },
@@ -720,7 +740,7 @@ function MainScreen(): React.JSX.Element {
       val = await AsyncStorage.getItem('failure');
       if (val === 'true') {
         setFailure(true);
-        console.log("Initial setting of failure to true from async storage");
+        console.log('Initial setting of failure to true from async storage');
         gFailure = true;
       }
       val = await AsyncStorage.getItem('light');
@@ -766,6 +786,7 @@ function MainScreen(): React.JSX.Element {
           setIsConnected(true);
           if (!LOCAL && !inCall) {
             const callId = ClientManager.makeCall(gcallto);
+            console.log('CallId: ', callId);
             //playVideo();
             updateStatus(0, 'allow', 'In Call');
           }
@@ -821,21 +842,22 @@ function MainScreen(): React.JSX.Element {
       if (task.active && task.results != 'allow') {
         good = false;
       }
-    })
-    if(good) {
-      endVideo = vvideo;
+    });
+    if (good) {
+      endVideo = tvideo;
     } else {
-      endVideo = rvideo;
+      endVideo = tvideof;
     }
     setShowVideo(true);
     console.log('Show Video set to true');
     var obj = {};
     obj.name = 'Verification';
-    obj.results = 'done';
+    obj.results = good ? 'allow' : 'block';
     obj.desc = 'Verified';
     obj.status = '1';
     obj.deviceId = deviceId;
     obj.phone = '' + gPhone;
+    obj.sessionId = sessionId;
     sendResults(obj);
   }, [done]);
 
@@ -950,13 +972,34 @@ function MainScreen(): React.JSX.Element {
       alterState(v);
     }
   };
+  const goDeeper = async () => {
+    if (inCall) {
+      console.log('In call, not going deeper');
+      return;
+    }
+    console.log('Going deeper!');
+    setDeeper(true);
+    loginHandler();
+    setTimeout(() => {
+      setDeeper(false);
+      setFront(false);
+    }, 4000);
+  };
   const loginHandler = async () => {
     console.log('Pressed the button');
+    /*    if (front && !inCall) {
+      console.log('Turning off front splash');
+      setTimeout(() => {
+        setFront(false);
+      }, 1000);
+    }
+*/
     if (inCall) {
       console.log('In call, so hang up');
       ClientManager.endCall();
       updateStatus(0, 'allow', 'Call Ended');
       setStartSplash(false);
+      setFront(true);
       return;
     }
     reset();
@@ -995,7 +1038,7 @@ function MainScreen(): React.JSX.Element {
     console.log('About to set done to true');
     setDone(true);
   };
-  const reset = async () => {
+  const reset = async (useFront = false) => {
     console.log('Reset!');
     const newTasks = tasks.map((c, i) => {
       c.status = -1;
@@ -1012,6 +1055,10 @@ function MainScreen(): React.JSX.Element {
     setWarning(false);
     preFacial = false;
     alterState(null);
+    if (useFront) {
+      setFront(true);
+    }
+    //setFront(true);
 
     //await AsyncStorage.clear();
   };
@@ -1026,7 +1073,7 @@ function MainScreen(): React.JSX.Element {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={[
-          {backgroundColor: showVideo ? bcolor : Colors.lighter}, //#ECFFDC
+          {backgroundColor: showVideo ? bcolor : '#DFC5FE'}, //#ECFFDC
           {height: '100%'},
         ]}>
         {facial && (
@@ -1051,7 +1098,7 @@ function MainScreen(): React.JSX.Element {
               style={[styles.settings, {backgroundColor: 'red'}]}
               isVisible={warning}>
               <Video
-                source={rvideo}
+                source={TBVaultFail}
                 paused={false}
                 style={[styles.video, {top: -40}]}
                 repeat={false}
@@ -1081,6 +1128,122 @@ function MainScreen(): React.JSX.Element {
                 ]}>
                 Touch anywhere to dismiss
               </Text>
+            </Modal>
+          </View>
+        )}
+        {1 && (
+          <View style={{flex: 1}}>
+            <Modal
+              isVisible={deeper}
+              animationOutTiming={1000}
+              animationInTiming={1000}>
+              <View style={styles.rbutton}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setDeeper(false);
+                  }}>
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      {fontSize: 25, textAlign: 'center'},
+                    ]}>
+                    Let's look closer at what's happening in the background...
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Modal>
+          </View>
+        )}
+        {1 && (
+          <View
+            onTouchStart={() => {
+              //setFront(false);
+            }}>
+            <Modal
+              style={[styles.settings, {backgroundColor: 'white', margin: 0}]}
+              transparent={true}
+              hideModalContentWhileAnimating={true}
+              animationOut={'fadeOut'}
+              animationIn={'fadeIn'}
+              animationOutTiming={1000}
+              animationInTiming={1000}
+              isVisible={front}>
+              <ImageBackground
+                source={require('../images/TBackground.png')}
+                style={styles.front}>
+                <Text style={styles.absoluteText}>v{ver}</Text>
+                <Text
+                  style={[
+                    styles.text,
+                    {
+                      fontSize: 40,
+                      color: 'white',
+                      marginTop: 80,
+                    },
+                  ]}>
+                  Trusted Bank
+                </Text>
+                <Image
+                  source={require('../images/TBLogo-B.png')}
+                  style={[
+                    styles.logo2,
+                    {width: 200, height: 180, marginTop: 60, opacity: 1.0},
+                  ]}></Image>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    {
+                      color: 'white',
+                      marginTop: 50,
+                    },
+                  ]}>
+                  Call to speak to our Agent
+                </Text>
+                <View style={{flexDirection: 'row', marginTop: 20}}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      goDeeper();
+                    }}>
+                    <Image
+                      source={require('../images/phone.png')}
+                      style={[
+                        styles.logo2,
+                        {
+                          width: 80,
+                          height: 80,
+                          marginTop: 80,
+                          opacity: 1.0,
+                          marginRight: 70,
+                        },
+                      ]}></Image>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setFront(false);
+                    }}>
+                    <Image
+                      source={require('../images/hangup.png')}
+                      style={[
+                        styles.smallIcon,
+                        {
+                          width: 80,
+                          height: 80,
+                          marginTop: 80,
+                          opacity: 1.0,
+                        },
+                      ]}></Image>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={styles.absoluteSettings}
+                  onPress={() => {
+                    setSettings(true);
+                  }}>
+                  <Image
+                    style={styles.smallIcon} //{[styles.smallIcon, {marginTop: 70, marginLeft: 300}]}
+                    source={require('../images/settingsw.png')}></Image>
+                </TouchableOpacity>
+              </ImageBackground>
             </Modal>
           </View>
         )}
@@ -1243,6 +1406,29 @@ function MainScreen(): React.JSX.Element {
                 ]}>
                 Settings
               </Text>
+              <View style={{height: 80}}>
+                {countryCode && (
+                  <PhoneInput
+                    containerStyle={[styles.phone]}
+                    defaultValue={inputNumber} //defaultNumber}
+                    defaultCode={countryCode} //global.myCountry}
+                    textInputProps={{returnKeyType: 'done'}}
+                    onChangeText={text => {
+                      console.log('onChangeText: ', text);
+                      setInputNumber(text);
+                    }}
+                    onChangeFormattedText={text => {
+                      //console.log("onChangeFormattedText: ", text)
+                      //setInputNumber(text);
+                    }}
+                    onChangeCountry={text => {
+                      setCountryCode(text.cca2);
+                    }}
+                    withDarkTheme
+                    withShadow
+                  />
+                )}
+              </View>
               <BouncyCheckbox
                 key={-1}
                 size={30}
@@ -1301,7 +1487,7 @@ function MainScreen(): React.JSX.Element {
                     marginLeft: -10,
                   }}
                   onPress={(isChecked: boolean) => {
-                    console.log("Setting failure in gui to ", isChecked);
+                    console.log('Setting failure in gui to ', isChecked);
                     setFailure(isChecked);
                     gFailure = isChecked;
                   }}
@@ -1390,7 +1576,7 @@ function MainScreen(): React.JSX.Element {
                 setSplash(true);
               }}
             />
-            {countryCode && (
+            {0 && countryCode && (
               <PhoneInput
                 containerStyle={styles.phone}
                 defaultValue={inputNumber} //defaultNumber}
@@ -1449,7 +1635,7 @@ function MainScreen(): React.JSX.Element {
             //if (task && task.active) console.log('Mapped Task: ', task);
             if (task && task.active)
               return (
-                <Section key={100+task.id}>
+                <Section key={100 + task.id}>
                   <FraudCheck
                     value={task.status}
                     title={task.name}
@@ -1467,7 +1653,7 @@ function MainScreen(): React.JSX.Element {
               backgroundColor: isDarkMode ? Colors.black : '',
             },
           ]}>
-          <TouchableOpacity onPress={reset}>
+          <TouchableOpacity onPress={() => reset(true)}>
             <Image
               style={[styles.smallIcon, {width: 40}]}
               source={require('../images/reset.png')}></Image>
