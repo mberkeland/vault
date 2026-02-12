@@ -164,11 +164,6 @@ function MainScreen(): React.JSX.Element {
     const isDarkMode = false; // useColorScheme() === 'dark';
     return (
       <View>
-        {0 ? (
-          <ImageBackground
-            source={require('../images/TBackground.png')}
-            style={[styles.front, {opacity: 1.0}]}></ImageBackground>
-        ) : null}
         <Text
           style={[
             styles.text,
@@ -1028,8 +1023,13 @@ function MainScreen(): React.JSX.Element {
 
     //await AsyncStorage.clear();
   };
+  /*
+  <ImageBackground
+      source={require('../images/TBackground.png')}
+      style={[styles.front, {opacity: 1.0, width: '100%', height: '100%'}]}>
+*/
   return (
-    <SafeAreaView style={backgroundStyle}>
+    <SafeAreaView style={[backgroundStyle, {}]}>
       {true && (
         <StatusBar
           barStyle={isDarkMode ? 'light-content' : 'dark-content'}
@@ -1039,7 +1039,7 @@ function MainScreen(): React.JSX.Element {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={[
-          {backgroundColor: showVideo ? bcolor : '#DFC5FE'}, //#ECFFDC
+          {backgroundColor: showVideo ? bcolor : '#DFC5FE'},
           {height: '100%'},
         ]}>
         {facial ? (
@@ -1223,7 +1223,12 @@ function MainScreen(): React.JSX.Element {
               <Image
                 source={require('../images/VonagePOE_Primary.png')}
                 style={[
-                  {width: 240, height: 80, marginTop: -120, marginLeft: -150},
+                  {
+                    width: 240,
+                    height: 80,
+                    marginTop: -120,
+                    marginLeft: -150,
+                  },
                 ]}></Image>
               <Text
                 style={[
@@ -1461,26 +1466,28 @@ function MainScreen(): React.JSX.Element {
                   }}
                 />
               }
-              <BouncyCheckbox
-                key={-4}
-                size={30}
-                text={'Light the Light'}
-                isChecked={light}
-                innerIconStyle={{borderWidth: 4}}
-                textStyle={{
-                  textDecorationLine: 'none',
-                  fontSize: 30,
-                }}
-                style={{
-                  width: '90%',
-                  marginTop: 10,
-                  marginBottom: 10,
-                  marginLeft: -10,
-                }}
-                onPress={(isChecked: boolean) => {
-                  setLight(isChecked);
-                }}
-              />
+              {0 ? (
+                <BouncyCheckbox
+                  key={-4}
+                  size={30}
+                  text={'Light the Light'}
+                  isChecked={light}
+                  innerIconStyle={{borderWidth: 4}}
+                  textStyle={{
+                    textDecorationLine: 'none',
+                    fontSize: 30,
+                  }}
+                  style={{
+                    width: '90%',
+                    marginTop: 10,
+                    marginBottom: 10,
+                    marginLeft: -10,
+                  }}
+                  onPress={(isChecked: boolean) => {
+                    setLight(isChecked);
+                  }}
+                />
+              ) : null}
               {tasks.map(task => {
                 var name = task.name.replace(/\n/g, ' ');
                 return (
