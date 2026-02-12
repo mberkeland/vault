@@ -163,48 +163,30 @@ function MainScreen(): React.JSX.Element {
   const Header = ({onData}): Node => {
     const isDarkMode = false; // useColorScheme() === 'dark';
     return (
-      <ImageBackground
-        accessibilityRole="image"
-        testID="new-app-screen-header"
-        source={
-          skin === 'vault'
-            ? require('../images/vonage_logo.png')
-            : require('../images/TBLogo-B.png')
-        }
-        style={[
-          styles.background,
-          {
-            backgroundColor: isDarkMode ? Colors.darker : '#DFC5FE', //lightblue
-          },
-        ]}
-        imageStyle={skin === 'vault' ? styles.logo : styles.logo2}>
-        {skin === 'vault' ? (
-          <Text
-            style={[
-              styles.text,
-              {
-                color: isDarkMode ? Colors.white : Colors.black,
-              },
-            ]}>
-            The Vonage
-            {'\n'}
-            Vault
-          </Text>
-        ) : (
-          <Text
-            style={[
-              styles.text,
-              {
-                color: Colors.dark,
-              },
-            ]}>
-            Trusted
-            {'\n\n\n'}
-            Bank
-            {'\n'}
-          </Text>
-        )}
-      </ImageBackground>
+      <View>
+        {0 ? (
+          <ImageBackground
+            source={require('../images/TBackground.png')}
+            style={[styles.front, {opacity: 1.0}]}></ImageBackground>
+        ) : null}
+        <Text
+          style={[
+            styles.text,
+            {
+              marginTop: 40,
+              color: isDarkMode ? Colors.white : Colors.black,
+            },
+          ]}>
+          Trusted Bank
+        </Text>
+        <Image
+          style={{width: 150, height: 150, marginLeft: 20, marginTop: 20}}
+          source={
+            skin === 'vault'
+              ? require('../images/vonage_logo.png')
+              : require('../images/TBLogo-B.png')
+          }></Image>
+      </View>
     );
   };
   const [checked, setChecked] = useState<boolean>(false);
@@ -1060,7 +1042,7 @@ function MainScreen(): React.JSX.Element {
           {backgroundColor: showVideo ? bcolor : '#DFC5FE'}, //#ECFFDC
           {height: '100%'},
         ]}>
-        {facial && (
+        {facial ? (
           <View>
             <Modal isVisible={facial}>
               <Button title="Cancel Liveness Check" onPress={stopFacial} />
@@ -1072,8 +1054,8 @@ function MainScreen(): React.JSX.Element {
               />
             </Modal>
           </View>
-        )}
-        {warning && (
+        ) : null}
+        {warning ? (
           <View
             onTouchStart={() => {
               setWarning(false);
@@ -1114,7 +1096,7 @@ function MainScreen(): React.JSX.Element {
               </Text>
             </Modal>
           </View>
-        )}
+        ) : null}
         {1 && (
           <View style={{flex: 1}}>
             <Modal
@@ -1230,7 +1212,7 @@ function MainScreen(): React.JSX.Element {
             </Modal>
           </View>
         )}
-        {splash && (
+        {splash ? (
           <View
             onTouchStart={() => {
               setSplash(false);
@@ -1283,8 +1265,8 @@ function MainScreen(): React.JSX.Element {
               </Text>
             </Modal>
           </View>
-        )}
-        {popup && (
+        ) : null}
+        {popup ? (
           <View>
             <Modal
               style={[styles.settings]}
@@ -1373,8 +1355,8 @@ function MainScreen(): React.JSX.Element {
               </View>
             </Modal>
           </View>
-        )}
-        {settings && (
+        ) : null}
+        {settings ? (
           <View>
             <Modal
               style={[styles.settings]}
@@ -1530,7 +1512,7 @@ function MainScreen(): React.JSX.Element {
               </View>
             </Modal>
           </View>
-        )}
+        ) : null}
         {startsplash || showVideo ? (
           <View
             style={[
@@ -1562,27 +1544,6 @@ function MainScreen(): React.JSX.Element {
                 setSplash(true);
               }}
             />
-            {0 && countryCode && (
-              <PhoneInput
-                containerStyle={styles.phone}
-                defaultValue={inputNumber} //defaultNumber}
-                defaultCode={countryCode} //global.myCountry}
-                textInputProps={{returnKeyType: 'done'}}
-                onChangeText={text => {
-                  console.log('onChangeText: ', text);
-                  setInputNumber(text);
-                }}
-                onChangeFormattedText={text => {
-                  //console.log("onChangeFormattedText: ", text)
-                  //setInputNumber(text);
-                }}
-                onChangeCountry={text => {
-                  setCountryCode(text.cca2);
-                }}
-                withDarkTheme
-                withShadow
-              />
-            )}
           </View>
         )}
         <View
