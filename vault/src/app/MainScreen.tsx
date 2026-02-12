@@ -204,22 +204,6 @@ function MainScreen(): React.JSX.Element {
             {'\n'}
           </Text>
         )}
-        <Text
-          onPress={e => {
-            e.preventDefault();
-            console.log('Splashing?');
-            onData(true);
-          }}
-          style={[
-            styles.ver,
-            {
-              color: isDarkMode ? Colors.white : Colors.black,
-              textDecorationLine: 'underline',
-              fontWeight: 'bold',
-            },
-          ]}>
-          v{ver}
-        </Text>
       </ImageBackground>
     );
   };
@@ -1171,7 +1155,6 @@ function MainScreen(): React.JSX.Element {
               <ImageBackground
                 source={require('../images/TBackground.png')}
                 style={styles.front}>
-                <Text style={styles.absoluteText}>v{ver}</Text>
                 <Text
                   style={[
                     styles.text,
@@ -1197,7 +1180,7 @@ function MainScreen(): React.JSX.Element {
                       marginTop: 50,
                     },
                   ]}>
-                  Call to speak to our Agent
+                  Call to speak to our agent
                 </Text>
                 <View style={{flexDirection: 'row', marginTop: 20}}>
                   <TouchableOpacity
@@ -1397,6 +1380,9 @@ function MainScreen(): React.JSX.Element {
               style={[styles.settings]}
               transparent={false}
               isVisible={settings}>
+              <Text style={[styles.absoluteText, {color: 'black'}]}>
+                v{ver}
+              </Text>
               <Text
                 style={[
                   styles.text,
