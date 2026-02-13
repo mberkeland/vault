@@ -71,7 +71,7 @@ export const styles = StyleSheet.create({
     height: 50,
   },
   checkText: {
-    width: 120,
+    width: 135,
     position: 'absolute',
     left: 70,
     fontSize: 20,

@@ -624,7 +624,7 @@ function MainScreen(): React.JSX.Element {
     {
       id: 2,
       tag: 'nv',
-      name: 'Silent\nAuth',
+      name: 'Silent\nAuthentication',
       desc: '',
       tech: 'Network API',
       prompt: 'Silently verifying that this phone is the number expected',
