@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.06';
+const ver = '2.07';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -191,7 +191,7 @@ function MainScreen(): React.JSX.Element {
   const [inProcess, setInProcess] = useState(false);
   const [facial, setFacial] = useState(false);
   const [settings, setSettings] = useState(false);
-  const [fast, setFast] = useState(false);
+  const [fast, setFast] = useState(true);
   const [demo, setDemo] = useState(false);
   const [sandbox, setSandbox] = useState(false);
   const [popup, setPopup] = useState(false);
@@ -686,7 +686,7 @@ function MainScreen(): React.JSX.Element {
     async function fetchSettings() {
       var val;
       val = await AsyncStorage.getItem('fast');
-      if (val == 'true') {
+      if (1 || val == 'true') {
         // Default is false, so only change if we read true
         setFast(true);
       }
@@ -1402,25 +1402,27 @@ function MainScreen(): React.JSX.Element {
                   />
                 )}
               </View>
-              <BouncyCheckbox
-                key={-1}
-                size={30}
-                text={'Use Fast Mode'}
-                isChecked={fast}
-                innerIconStyle={{borderWidth: 4}}
-                textStyle={{
-                  textDecorationLine: 'none',
-                  fontSize: 30,
-                }}
-                style={{
-                  width: '90%',
-                  marginTop: 20,
-                  marginLeft: -10,
-                }}
-                onPress={(isChecked: boolean) => {
-                  setFast(isChecked);
-                }}
-              />
+              {0 ? (
+                <BouncyCheckbox
+                  key={-1}
+                  size={30}
+                  text={'Use Fast Mode'}
+                  isChecked={fast}
+                  innerIconStyle={{borderWidth: 4}}
+                  textStyle={{
+                    textDecorationLine: 'none',
+                    fontSize: 30,
+                  }}
+                  style={{
+                    width: '90%',
+                    marginTop: 20,
+                    marginLeft: -10,
+                  }}
+                  onPress={(isChecked: boolean) => {
+                    setFast(isChecked);
+                  }}
+                />
+              ) : null}
               <BouncyCheckbox
                 key={-2}
                 size={30}
