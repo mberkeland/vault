@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.07';
+const ver = '2.08';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';

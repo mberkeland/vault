@@ -307,7 +307,7 @@ app.post("/checkAuthentication", async (req, res) => {
           clearInterval(interval);
           return res.status(200).json({result: 'block', reason: 'unable to run verification checks'}).end();
         }
-  },1000);
+  },500);
 });
 app.post("/getFd", async (req, res) => {
   console.log("getFd request: ", req.body);

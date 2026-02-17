@@ -71,14 +71,14 @@ export const styles = StyleSheet.create({
     height: 50,
   },
   checkText: {
-    width: 135,
+    width: 143,
     position: 'absolute',
     left: 70,
     fontSize: 20,
     fontWeight: '700',
   },
   checkText2: {
-    width: 200,
+    width: 190,
     position: 'absolute',
     left: 180,
     fontSize: 15,
