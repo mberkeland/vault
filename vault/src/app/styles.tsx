@@ -226,4 +226,7 @@ export const styles = StyleSheet.create({
     // Add any specific text styling here (color, font size, etc.)
     color: 'white',
   },
+  tb_back: {
+    backgroundColor: '#42084e',
+  },
 });

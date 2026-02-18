@@ -269,10 +269,10 @@ app.post("/authenticate", async (req, res) => {
       stuff.sessionId = req.body.sessionId ;
       stuff.reason = req.body.reason;
       await pusher.trigger('vault-' + stuff.deviceId, "authenticate", stuff);
-    setTimeout(() => {
-      console.log("Sent authenticate pusher event to device: ", stuff);
-      pusher.trigger('nova', "event", stuff);
-    },1000);
+      setTimeout(() => {
+        console.log("Sent authenticate pusher event to device: ", stuff);
+        pusher.trigger('nova', "event", stuff);
+      },1000);
       methods=stuff.methods
     }
   }
@@ -298,7 +298,7 @@ app.post("/checkAuthentication", async (req, res) => {
           console.log("Returning Got AI checkAuthentication request",obj);
           return res.status(200).json(obj).end();
         } else {
-          console.log("Not eneough steps finished yet.. keep waiting")
+          console.log("Not enough steps finished yet.. keep waiting")
         }
       } else {
       }

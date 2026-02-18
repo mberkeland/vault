@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.08';
+const ver = '2.10';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -72,7 +72,7 @@ var phase = 0;
 var faceUrl = 'https://main.d3sn8is0cbxe5o.amplifyapp.com';
 var udpUrl = '10.47.111.20';
 var udpPort = 50000;
-var bcolor = '#ECFFDC';
+var bcolor = '#42084e'; //'#ECFFDC';
 var endVideo = tvideo;
 const filex = require('../images/redx2.gif');
 const fileq = require('../images/qmark.png');
@@ -157,7 +157,7 @@ function MainScreen(): React.JSX.Element {
     }
   };
   const backgroundStyle = {
-    backgroundColor: showVideo ? 'lightgreen' : Colors.lighter,
+    backgroundColor: showVideo ? '#42084e' : Colors.lighter,
     //    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter, lightgreen
   };
   const Header = ({onData}): Node => {
@@ -169,7 +169,7 @@ function MainScreen(): React.JSX.Element {
             styles.text,
             {
               marginTop: 40,
-              color: isDarkMode ? Colors.white : Colors.black,
+              color: Colors.white,
             },
           ]}>
           Trusted Bank
@@ -796,7 +796,7 @@ function MainScreen(): React.JSX.Element {
     setInProcess(false);
     setFacial(false);
     //bcolor ='rgba( 255, 0, 0, 0.4)'; // Failure
-    bcolor = '#ECFFDC'; // Good
+    bcolor = '#42084e'; //'#ECFFDC'; // Good
     var good = true;
     tasks.map(task => {
       console.log('Task results: ', task.name, task.results, task.active);
@@ -1039,7 +1039,7 @@ function MainScreen(): React.JSX.Element {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={[
-          {backgroundColor: showVideo ? bcolor : '#DFC5FE'},
+          {backgroundColor: showVideo ? bcolor : '#42084e'}, //'#DFC5FE'},
           {height: '100%'},
         ]}>
         {facial ? (
@@ -1612,7 +1612,7 @@ function MainScreen(): React.JSX.Element {
           <TouchableOpacity onPress={() => reset(true)}>
             <Image
               style={[styles.smallIcon, {width: 40}]}
-              source={require('../images/reset.png')}></Image>
+              source={require('../images/resetw.png')}></Image>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
@@ -1620,7 +1620,7 @@ function MainScreen(): React.JSX.Element {
             }}>
             <Image
               style={[styles.smallIcon]}
-              source={require('../images/settings.png')}></Image>
+              source={require('../images/settingsw.png')}></Image>
           </TouchableOpacity>
         </View>
       </ScrollView>
