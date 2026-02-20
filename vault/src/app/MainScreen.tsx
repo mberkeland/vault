@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.10';
+const ver = '2.12';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -405,7 +405,7 @@ function MainScreen(): React.JSX.Element {
       }
       body.methods = methods;
     }
-    if (!demo) {
+    if (!demo || tasks[index].tag == 'ai') {
       if (sandbox && tasks[index].tag == 'nv') {
         body.phone = '990' + gPhone.substring(gPhone.length - 10);
       }
@@ -490,7 +490,12 @@ function MainScreen(): React.JSX.Element {
       // Demo mode
       await sleep(delay);
       console.log('Demo mode for ', index);
-      updateStatus(index, 'allow');
+      if (gFailure && tasks[index].tag == 'nv') {
+        await sleep(delay);
+        updateStatus(index, 'block', 'Unable to verify');
+        return;
+      }
+      updateStatus(index, 'allow', 'allow');
     }
   }
   function playVideo() {
@@ -941,10 +946,16 @@ function MainScreen(): React.JSX.Element {
     console.log('Going deeper!');
     setDeeper(true);
     loginHandler();
-    setTimeout(() => {
+    var timer = 4000;
+    if (!tasks[0].active) {
       setDeeper(false);
       setFront(false);
-    }, 4000);
+    } else {
+      setTimeout(() => {
+        setDeeper(false);
+        setFront(false);
+      }, timer);
+    }
   };
   const loginHandler = async () => {
     console.log('Pressed the button');
@@ -957,6 +968,7 @@ function MainScreen(): React.JSX.Element {
 */
     if (inCall) {
       console.log('In call, so hang up');
+      setInCall(false);
       ClientManager.endCall();
       updateStatus(0, 'allow', 'Call Ended');
       setStartSplash(false);

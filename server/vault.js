@@ -135,7 +135,7 @@ async function startup() {
     users[vid] = result;
     users[vid].id = vid;
     users[vid].request_id = null;
-    if(result.pusher_key) {
+    if (result.pusher_key) {
       console.log("Got pusher key: ", result.pusher_key);
       pkey = result.pusher_key;
       pusher = new Pusher({
@@ -168,7 +168,7 @@ async function startup() {
             },
           },
           version: "v2",
-        }; 
+        };
         caps.voice = {
           webhooks: {
             answer_url: {
@@ -205,16 +205,18 @@ async function startup() {
     users[sid] = result;
     users[sid].id = vid;
     users[sid].request_id = null;
+    console.log("Creating Identity Insights user: ", users[sid].app_id, users[sid].keyfile);
+
   });
-  if(!process.env.VCR_INSTANCE_PUBLIC_URL.includes("-debug-")) {
-  let interval = setInterval(() => {
-    axios
-      .get(`${process.env.VCR_INSTANCE_PUBLIC_URL}/keepalive`)
-      .then((resp) => {
-        //console.log(resp.data);
-      })
-      .catch((err) => console.log("VCR interval error:", err.code));
-  }, 30000);
+  if (!process.env.VCR_INSTANCE_PUBLIC_URL.includes("-debug-")) {
+    let interval = setInterval(() => {
+      axios
+        .get(`${process.env.VCR_INSTANCE_PUBLIC_URL}/keepalive`)
+        .then((resp) => {
+          //console.log(resp.data);
+        })
+        .catch((err) => console.log("VCR interval error:", err.code));
+    }, 30000);
   }
   await getSB(sbox);
   console.log("****************************** TEF Location")
@@ -261,53 +263,55 @@ async function verifyRequest(reqId, code) {
 app.post("/authenticate", async (req, res) => {
   console.log("Got AI Authentications request!!!!", req.body);
   var date = new Date().toLocaleString();
-  var methods=[];
-  if(req.body.sessionId) {
+  var methods = [];
+  if (req.body.sessionId) {
     var stuff = await vcrstate.get('' + req.body.sessionId);
-    if(stuff){
-      stuff.action="authenticate";
-      stuff.sessionId = req.body.sessionId ;
+    if (stuff) {
+      stuff.action = "authenticate";
+      stuff.sessionId = req.body.sessionId;
       stuff.reason = req.body.reason;
       await pusher.trigger('vault-' + stuff.deviceId, "authenticate", stuff);
       setTimeout(() => {
-        console.log("Sent authenticate pusher event to device: ", stuff);
+        console.log("Sent authenticate pusher event to gui: ", stuff);
         pusher.trigger('nova', "event", stuff);
-      },1000);
-      methods=stuff.methods
+      }, 1000);
+      methods = stuff.methods
     }
   }
-//  setTimeout(() => {
+  //  setTimeout(() => {
+  console.log("Returning Got AI Authentications request!!!!", { methods: methods });
   return res.status(200).json({ methods: methods }).end();
-//  }, 5000);
+  //  }, 5000);
 });
 app.post("/checkAuthentication", async (req, res) => {
   console.log("Got AI checkAuthentication request!!!!", req.body);
   var date = new Date().toLocaleString();
   var counter = 0;
   let interval = setInterval(async () => {
-//  setTimeout(async () => {
-    var methods=[];
+    //  setTimeout(async () => {
+    var methods = [];
     var obj = {}
-    if(req.body.sessionId) {
+    if (req.body.sessionId) {
       var stuff = await vcrstate.get('' + req.body.sessionId);
-      if(stuff){
-        console.log("got Stuff on checkAuthentication",stuff)
+      if (stuff) {
+        console.log("got Stuff on checkAuthentication", stuff)
         obj = stuff;
-        if(Object.hasOwn(obj,"result") && (obj.count>=obj.methods.length)) {
+        if (Object.hasOwn(obj, "result") && (obj.count >= obj.methods.length)) {
           clearInterval(interval);
-          console.log("Returning Got AI checkAuthentication request",obj);
+          console.log("Returning Got AI checkAuthentication request", obj);
           return res.status(200).json(obj).end();
         } else {
-          console.log("Not enough steps finished yet.. keep waiting")
+          console.log("Not enough steps finished yet.. keep waiting: ", counter)
         }
       } else {
       }
     }
-    if(counter++ > 4) {
-          clearInterval(interval);
-          return res.status(200).json({result: 'block', reason: 'unable to run verification checks'}).end();
-        }
-  },500);
+    if (counter++ > 24) {
+      clearInterval(interval);
+      console.log("Got AI checkAuthentication TIMEOUT, so block")
+      return res.status(200).json({ result: 'block', reason: 'unable to run verification checks' }).end();
+    }
+  }, 500);
 });
 app.post("/getFd", async (req, res) => {
   console.log("getFd request: ", req.body);
@@ -452,34 +456,34 @@ app.post("/getSimswap", async (req, res) => {
   console.log("Number Insight request: ", body);
   try {
     if (1 || phone.startsWith("1408375")) {
-      console.log("Using Identity Insights");
+      console.log("Using Identity Insights: ", users[sid].app_id);
       const jwt = tokenGenerate(users[sid].app_id, users[sid].keyfile, {});
       const params = {
-  phone_number: phone,
-  insights: {
-    format: {},
-    original_carrier: {},
-    current_carrier: {},
-                sim_swap: {
-              period: 240
-            },
-  },
-};
-//const clientInsights = new IdentityInsights(jwt, {});
+        phone_number: phone,
+        insights: {
+          format: {},
+          original_carrier: {},
+          current_carrier: {},
+          sim_swap: {
+            period: 240
+          },
+        },
+      };
+      //const clientInsights = new IdentityInsights(jwt, {});
 
-//const results = await clientInsights.getIdentityInsights(params);
+      //const results = await clientInsights.getIdentityInsights(params);
       var obj = {
         phone_number: phone,
         purpose: "FraudPreventionAndDetection",
         insights: {
-            format: {},
-            sim_swap: {
-              period: 240
-            },
-            original_carrier: {},
-            current_carrier: {}
-          }
+          format: {},
+          sim_swap: {
+            period: 240
+          },
+          original_carrier: {},
+          current_carrier: {}
         }
+      }
       results = await axios.post("https://api-us.vonage.com/v0.1/identity-insights", obj, {
         headers: {
           "Content-Type": "application/json",
@@ -580,48 +584,48 @@ app.post("/getAi", async (req, res) => {
     console.log("No phone passed in.");
     return res.status(200).end();
   }
-  console.log("Using/creating user: ",phone)
-await  vonage.users.getUser(phone)
-  .then((user) => {
-    console.log("Got existing user!");
-    jwt = tokenGenerate(users[vid].app_id, users[vid].keyfile, {
-      sub: phone,
-      exp: Math.round(new Date().getTime() / 1000) + 3600,
-      acl: aclPaths
-    });
-  }
-  )
-  .catch(async (error) => {
-    console.log("User not found, let's create it!")
-  await  vonage.users.createUser({
-  'name': phone,
-  'displayName': phone,
-})
-  .then((user) => {
-    console.log("Created` user: ", user) 
-    jwt = tokenGenerate(users[vid].app_id, users[vid].keyfile, {
-      sub: phone,
-      exp: Math.round(new Date().getTime() / 1000) + 3600,
-      acl: aclPaths
-    });
-  })
-  .catch((error) => console.error(error));
-  }
-);
-/*
-    setTimeout(() => {
-      console.log("Sending pusher event to deviceId: ", deviceId);
-    pusher.trigger('vault-' + deviceId, "event", { event: 'test' });
-    }, 2000);
-*/
+  console.log("Using/creating user: ", phone)
+  await vonage.users.getUser(phone)
+    .then((user) => {
+      console.log("Got existing user!");
+      jwt = tokenGenerate(users[vid].app_id, users[vid].keyfile, {
+        sub: phone,
+        exp: Math.round(new Date().getTime() / 1000) + 3600,
+        acl: aclPaths
+      });
+    }
+    )
+    .catch(async (error) => {
+      console.log("User not found, let's create it!")
+      await vonage.users.createUser({
+        'name': phone,
+        'displayName': phone,
+      })
+        .then((user) => {
+          console.log("Created` user: ", user)
+          jwt = tokenGenerate(users[vid].app_id, users[vid].keyfile, {
+            sub: phone,
+            exp: Math.round(new Date().getTime() / 1000) + 3600,
+            acl: aclPaths
+          });
+        })
+        .catch((error) => console.error(error));
+    }
+    );
+  /*
+      setTimeout(() => {
+        console.log("Sending pusher event to deviceId: ", deviceId);
+      pusher.trigger('vault-' + deviceId, "event", { event: 'test' });
+      }, 2000);
+  */
 
   var ai = "30";//"19895281169";
-  await vcrstate.set('' + phone, { deviceId: deviceId, phone:phone, methods: methods })
+  await vcrstate.set('' + phone, { deviceId: deviceId, phone: phone, methods: methods })
   console.log("Set vcrstate for phone ", phone, " to deviceId: ", deviceId);
   var stuff = await vcrstate.get('' + phone);
   console.log("vcrstate get returned: ", stuff, stuff.phone);
 
-  return res.status(200).json({ results: results, jwt: jwt, callto: ai, pkey: pkey  }).end();
+  return res.status(200).json({ results: results, jwt: jwt, callto: ai, pkey: pkey }).end();
 });
 
 app.post("/getFacial", (req, res) => {
@@ -690,76 +694,76 @@ app.get("/answer", async (req, res) => {
   var promptId = req.query.to;
   var stream = req.query.streamid;
   var stuff = await vcrstate.get('' + req.query.from_user);
-  if(stuff && stuff.deviceId) {
+  if (stuff && stuff.deviceId) {
     stream = stuff.deviceId;
   }
   let url = ws_url + "/socket?uid=" + uuid + "&streamid=" + stream + "&orig_uuid=" + uuid + "&region=us&promptId=" + promptId + "&video=1&usefilter=" + 1
-  var ncco =     [
-           {
-         action: "connect",
-         from: "Vonage",
-         limit: 300,
-         endpoint: [
-           {
-             type: "websocket",
-             uri: url,
-             //server_wss + "/socket?region=" + region + "&con_uuid=" + req.query.uuid + "&orig_uuid=" + req.query.uuid + "&orig_number=" + req.query.from + "&orig_to=" + req.query.to,
-             "content-type": "audio/l16;rate=16000",
-           },
-         ],
-       },
-/*
+  var ncco = [
+    {
       action: "connect",
-      from: "12074014183",//users[vid].vfrom,
-      endpoint: [ 
-        { type: "phone",
-          number: req.query.to } 
-      ]
-      }
-      */
-      ]
-    console.log("Returning answer ncco: ", ncco);
-    if(stuff){
-      stuff.uuid = uuid;
-      await vcrstate.set('' + uuid, stuff).then(() => {
-        vcrstate.expire('' + uuid, 300);
-        console.log("UUID state expiration set: ", uuid)
-      })
-      console.log("Updated vcrstate for phone ", req.query.from_user, stuff);
-    }
+      from: "Vonage",
+      limit: 300,
+      endpoint: [
+        {
+          type: "websocket",
+          uri: url,
+          //server_wss + "/socket?region=" + region + "&con_uuid=" + req.query.uuid + "&orig_uuid=" + req.query.uuid + "&orig_number=" + req.query.from + "&orig_to=" + req.query.to,
+          "content-type": "audio/l16;rate=16000",
+        },
+      ],
+    },
+    /*
+          action: "connect",
+          from: "12074014183",//users[vid].vfrom,
+          endpoint: [ 
+            { type: "phone",
+              number: req.query.to } 
+          ]
+          }
+          */
+  ]
+  console.log("Returning answer ncco: ", ncco);
+  if (stuff) {
+    stuff.uuid = uuid;
+    await vcrstate.set('' + uuid, stuff).then(() => {
+      vcrstate.expire('' + uuid, 300);
+      console.log("UUID state expiration set: ", uuid)
+    })
+    console.log("Updated vcrstate for phone ", req.query.from_user, stuff);
+  }
   return res.status(200).json(ncco).end();
 });
 app.post("/stepResults", async (req, res) => {
   console.log("Step Results: ", req.body);
   var date = new Date().toLocaleString();
   pusher.trigger('nova', "event", req.body);
-  if(req.body.sessionId) {
-    var validRes = ["allow","block"]
+  if (req.body.sessionId) {
+    var validRes = ["allow", "block"]
     var stuff = await vcrstate.get('' + req.body.sessionId);
-    if(!stuff) {
+    if (!stuff) {
       console.log("No stuff, returning");
       return res.status(200).end();
     }
-    console.log("Doing the big check: ",req.body.id>0 ,  validRes.includes(req.body.results?.toLowerCase()), (req.body.id>0) && (validRes.includes(req.body.results?.toLowerCase())))
-    if((req.body.id>0) && (validRes.includes(req.body.results?.toLowerCase()))) {
+    console.log("Doing the big check: ", req.body.id > 0, validRes.includes(req.body.results?.toLowerCase()), (req.body.id > 0) && (validRes.includes(req.body.results?.toLowerCase())))
+    if ((req.body.id > 0) && (validRes.includes(req.body.results?.toLowerCase()))) {
       var name = req.body.name.replace('\n', ' ');
       stuff.name = name;
-      console.log("Are we processing the auth now? ",stuff)
-      if(!stuff.count) {
-        stuff.count=1;
+      console.log("Are we processing the auth now? ", stuff)
+      if (!stuff.count) {
+        stuff.count = 1;
       } else {
         stuff.count++;
       }
-      if(!stuff.result || req.body.results == 'block') {
+      if (!stuff.result || req.body.results == 'block') {
         stuff.result = req.body.results;
       }
-      console.log("Setting new stuff: ",stuff)
+      console.log("Setting new stuff: ", stuff)
       await vcrstate.set(req.body.sessionId, stuff).then(() => {
         vcrstate.expire(req.body.sessionId, 300);
         console.log("stepResults state expiration set: ", req.body.sessionId)
       })
     }
-    console.log("Got stuff on stepResults: ",stuff)
+    console.log("Got stuff on stepResults: ", stuff)
   }
   return res.status(200).end();
 });
