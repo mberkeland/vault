@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.13';
+const ver = '2.14';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -1068,376 +1068,405 @@ function MainScreen(): React.JSX.Element {
       )}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{flexGrow: 1}}
         style={[
           {backgroundColor: showVideo ? bcolor : '#42084e'}, //'#DFC5FE'},
           {height: '100%'},
         ]}>
-        {facial ? (
-          <View>
-            <Modal isVisible={facial}>
-              <Button title="Cancel Liveness Check" onPress={stopFacial} />
-              <WebView
-                allowsInlineMediaPlayback={true}
-                style={{height: 100}}
-                source={{uri: faceUrl}}
-                onMessage={onMessage}
-              />
-            </Modal>
-          </View>
-        ) : null}
-        {warning ? (
-          <View
-            onTouchStart={() => {
-              setWarning(false);
-            }}>
-            <Modal
-              style={[styles.settings, {backgroundColor: 'red'}]}
-              isVisible={warning}>
-              <Video
-                source={TBVaultFail}
-                paused={false}
-                style={[styles.video, {top: -40}]}
-                repeat={false}
-              />
-              <Text
-                style={[
-                  styles.text,
-                  {
-                    color: 'white',
-                  },
-                ]}>
-                {bedrock}
-              </Text>
-              <Image
-                source={bedimage}
-                style={[
-                  styles.video,
-                  {width: 200, height: 180, marginTop: 20},
-                ]}></Image>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  {
-                    color: 'yellow',
-                    marginTop: 70,
-                  },
-                ]}>
-                Touch anywhere to dismiss
-              </Text>
-            </Modal>
-          </View>
-        ) : null}
-        {1 && (
-          <View style={{flex: 1}}>
-            <Modal
-              isVisible={deeper}
-              animationOutTiming={1000}
-              animationInTiming={1000}>
-              <View style={styles.rbutton}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setDeeper(false);
-                  }}>
-                  <Text
-                    style={[
-                      styles.buttonText,
-                      {fontSize: 25, textAlign: 'center'},
-                    ]}>
-                    Let's look closer at what's happening in the background...
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </Modal>
-          </View>
-        )}
-        {1 && (
-          <View
-            onTouchStart={() => {
-              //setFront(false);
-            }}>
-            <Modal
-              style={[styles.settings, {backgroundColor: 'white', margin: 0}]}
-              transparent={true}
-              hideModalContentWhileAnimating={true}
-              animationOut={'fadeOut'}
-              animationIn={'fadeIn'}
-              animationOutTiming={1000}
-              animationInTiming={1000}
-              isVisible={front}>
-              <ImageBackground
-                source={require('../images/TBackground.png')}
-                style={styles.front}>
+        <ImageBackground
+          source={require('../images/TBackground.png')}
+          style={[
+            //styles.front,
+            {flex: 1, width: '100%', height: '100%'},
+          ]}>
+          {facial ? (
+            <View>
+              <Modal isVisible={facial}>
+                <Button title="Cancel Liveness Check" onPress={stopFacial} />
+                <WebView
+                  allowsInlineMediaPlayback={true}
+                  style={{height: 100}}
+                  source={{uri: faceUrl}}
+                  onMessage={onMessage}
+                />
+              </Modal>
+            </View>
+          ) : null}
+          {warning ? (
+            <View
+              onTouchStart={() => {
+                setWarning(false);
+              }}>
+              <Modal
+                style={[styles.settings, {backgroundColor: 'red'}]}
+                isVisible={warning}>
+                <Video
+                  source={TBVaultFail}
+                  paused={false}
+                  style={[styles.video, {top: -40}]}
+                  repeat={false}
+                />
                 <Text
                   style={[
                     styles.text,
                     {
-                      fontSize: 40,
                       color: 'white',
-                      marginTop: 80,
                     },
                   ]}>
-                  Trusted Bank
+                  {bedrock}
                 </Text>
                 <Image
-                  source={require('../images/TBLogo-B.png')}
+                  source={bedimage}
                   style={[
-                    styles.logo2,
-                    {width: 200, height: 180, marginTop: 60, opacity: 1.0},
+                    styles.video,
+                    {width: 200, height: 180, marginTop: 20},
                   ]}></Image>
                 <Text
                   style={[
                     styles.sectionTitle,
                     {
-                      color: 'white',
-                      marginTop: 50,
+                      color: 'yellow',
+                      marginTop: 70,
                     },
                   ]}>
-                  Call to speak to our agent
+                  Touch anywhere to dismiss
                 </Text>
-                <View style={{flexDirection: 'row', marginTop: 20}}>
+              </Modal>
+            </View>
+          ) : null}
+          {1 && (
+            <View style={{flex: 1}}>
+              <Modal
+                isVisible={deeper}
+                animationOutTiming={1000}
+                animationInTiming={1000}>
+                <View style={styles.rbutton}>
                   <TouchableOpacity
                     onPress={() => {
-                      goDeeper();
+                      setDeeper(false);
                     }}>
-                    <Image
-                      source={require('../images/phone.png')}
+                    <Text
                       style={[
-                        styles.logo2,
-                        {
-                          width: 80,
-                          height: 80,
-                          marginTop: 80,
-                          opacity: 1.0,
-                          marginRight: 70,
-                        },
-                      ]}></Image>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setFront(false);
-                    }}>
-                    <Image
-                      source={require('../images/hangup.png')}
-                      style={[
-                        styles.smallIcon,
-                        {
-                          width: 80,
-                          height: 80,
-                          marginTop: 80,
-                          opacity: 1.0,
-                        },
-                      ]}></Image>
+                        styles.buttonText,
+                        {fontSize: 25, textAlign: 'center'},
+                      ]}>
+                      Let's look closer at what's happening in the background...
+                    </Text>
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={styles.absoluteSettings}
-                  onPress={() => {
-                    setSettings(true);
-                  }}>
-                  <Image
-                    style={styles.smallIcon} //{[styles.smallIcon, {marginTop: 70, marginLeft: 300}]}
-                    source={require('../images/settingsw.png')}></Image>
-                </TouchableOpacity>
-              </ImageBackground>
-            </Modal>
-          </View>
-        )}
-        {splash ? (
-          <View
-            onTouchStart={() => {
-              setSplash(false);
-            }}>
-            <Modal
-              style={[styles.settings, {backgroundColor: 'white'}]}
-              isVisible={splash}>
-              <Image
-                source={require('../images/VonagePOE_Primary.png')}
-                style={[
-                  {
-                    width: 240,
-                    height: 80,
-                    marginTop: -120,
-                    marginLeft: -150,
-                  },
-                ]}></Image>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  {
-                    color: 'darkblue',
-                    marginTop: 20,
-                  },
-                ]}>
-                Built with our partners
-              </Text>
-              <Image
-                source={require('../images/tef.png')}
-                style={[
-                  styles.video,
-                  {width: 340, height: 80, marginTop: 40},
-                ]}></Image>
-              <Image
-                source={require('../images/aduna2.png')}
-                style={[
-                  styles.video,
-                  {width: 300, height: 100, marginTop: 20},
-                ]}></Image>
-              <Image
-                source={require('../images/awspartner.png')}
-                style={[
-                  styles.video,
-                  {width: 200, height: 150, marginTop: 20},
-                ]}></Image>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  {
-                    color: 'darkblue',
-                    marginTop: 70,
-                  },
-                ]}>
-                Touch anywhere to dismiss
-              </Text>
-            </Modal>
-          </View>
-        ) : null}
-        {popup ? (
-          <View>
-            <Modal
-              style={[styles.settings]}
-              transparent={false}
-              isVisible={popup}>
-              <View style={styles.container}>
-                <Text style={[styles.techtext]}>{tasks[state].tech}</Text>
-                <Text
-                  style={[
-                    styles.text,
-                    {
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    },
-                  ]}>
-                  {tasks[state].name.replace(/\n/g, ' ')}
-                </Text>
-                <Text
-                  style={[
-                    styles.subtext,
-                    {
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    },
-                  ]}>
-                  {'\n'}
-                  {tasks[state].prompt}
-                  {'\n\n'}
-                </Text>
-                <Text
-                  style={[
-                    styles.text,
-                    {
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    },
-                  ]}>
-                  Result:
-                  {'\n'}
-                </Text>
-                {tasks[state].status == -4 ? (
-                  <View style={styles.icon}>
-                    <ActivityIndicator color={'blue'} size="large" />
-                  </View>
-                ) : (
-                  <Image source={tasks[state].icon} style={styles.icon}></Image>
-                )}
-                <Text
-                  style={[
-                    styles.text,
-                    {
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    },
-                  ]}>
-                  {tasks[state].desc}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    var final = state + 1;
-                    for (let i = state + 1; i < tasks.length; i++) {
-                      if (tasks[i] && tasks[i].active) {
-                        console.log('Got i: ', i);
-                        final = i;
-                        if (tasks[i].tag == 'facial') {
-                          preFacial = true;
-                        }
-                        break;
-                      } else {
-                        updateStatus(i, 'unused');
-                        console.log('Unusing ', i);
-                      }
-                    }
-                    alterState(final);
-                    setPopup(false);
-                  }}
-                  style={[styles.button, styles.enabledButton]}>
-                  <Text style={styles.buttonText}>Continue</Text>
-                </TouchableOpacity>
-              </View>
-              <View>
-                <TouchableOpacity onPress={reset}>
-                  <Image
+              </Modal>
+            </View>
+          )}
+          {1 && (
+            <View
+              onTouchStart={() => {
+                //setFront(false);
+              }}>
+              <Modal
+                style={[styles.settings, {backgroundColor: 'white', margin: 0}]}
+                transparent={true}
+                hideModalContentWhileAnimating={true}
+                animationOut={'fadeOut'}
+                animationIn={'fadeIn'}
+                animationOutTiming={1000}
+                animationInTiming={1000}
+                isVisible={front}>
+                <ImageBackground
+                  source={require('../images/TBackground.png')}
+                  style={styles.front}>
+                  <Text
                     style={[
-                      styles.smallIcon,
-                      {marginRight: 0, marginLeft: '90%'},
-                    ]}
-                    source={require('../images/cancel.png')}></Image>
-                </TouchableOpacity>
-              </View>
-            </Modal>
-          </View>
-        ) : null}
-        {settings ? (
-          <View>
-            <Modal
-              style={[styles.settings]}
-              transparent={false}
-              isVisible={settings}>
-              <Text style={[styles.absoluteText, {color: 'black'}]}>
-                v{ver}
-              </Text>
-              <Text
-                style={[
-                  styles.text,
-                  {
-                    color: isDarkMode ? Colors.white : Colors.black,
-                  },
-                ]}>
-                Settings
-              </Text>
-              <View style={{height: 80}}>
-                {countryCode && (
-                  <PhoneInput
-                    containerStyle={[styles.phone]}
-                    defaultValue={inputNumber} //defaultNumber}
-                    defaultCode={countryCode} //global.myCountry}
-                    textInputProps={{returnKeyType: 'done'}}
-                    onChangeText={text => {
-                      console.log('onChangeText: ', text);
-                      setInputNumber(text);
+                      styles.text,
+                      {
+                        fontSize: 40,
+                        color: 'white',
+                        marginTop: 80,
+                      },
+                    ]}>
+                    Trusted Bank
+                  </Text>
+                  <Image
+                    source={require('../images/TBLogo-B.png')}
+                    style={[
+                      styles.logo2,
+                      {width: 200, height: 180, marginTop: 60, opacity: 1.0},
+                    ]}></Image>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      {
+                        color: 'white',
+                        marginTop: 50,
+                      },
+                    ]}>
+                    Call to speak to our agent
+                  </Text>
+                  <View style={{flexDirection: 'row', marginTop: 20}}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        goDeeper();
+                      }}>
+                      <Image
+                        source={require('../images/phone.png')}
+                        style={[
+                          styles.logo2,
+                          {
+                            width: 80,
+                            height: 80,
+                            marginTop: 80,
+                            opacity: 1.0,
+                            marginRight: 70,
+                          },
+                        ]}></Image>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setFront(false);
+                      }}>
+                      <Image
+                        source={require('../images/hangup.png')}
+                        style={[
+                          styles.smallIcon,
+                          {
+                            width: 80,
+                            height: 80,
+                            marginTop: 80,
+                            opacity: 1.0,
+                          },
+                        ]}></Image>
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.absoluteSettings}
+                    onPress={() => {
+                      setSettings(true);
+                    }}>
+                    <Image
+                      style={styles.smallIcon} //{[styles.smallIcon, {marginTop: 70, marginLeft: 300}]}
+                      source={require('../images/settingsw.png')}></Image>
+                  </TouchableOpacity>
+                </ImageBackground>
+              </Modal>
+            </View>
+          )}
+          {splash ? (
+            <View
+              onTouchStart={() => {
+                setSplash(false);
+              }}>
+              <Modal
+                style={[styles.settings, {backgroundColor: 'white'}]}
+                isVisible={splash}>
+                <Image
+                  source={require('../images/VonagePOE_Primary.png')}
+                  style={[
+                    {
+                      width: 240,
+                      height: 80,
+                      marginTop: -120,
+                      marginLeft: -150,
+                    },
+                  ]}></Image>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    {
+                      color: 'darkblue',
+                      marginTop: 20,
+                    },
+                  ]}>
+                  Built with our partners
+                </Text>
+                <Image
+                  source={require('../images/tef.png')}
+                  style={[
+                    styles.video,
+                    {width: 340, height: 80, marginTop: 40},
+                  ]}></Image>
+                <Image
+                  source={require('../images/aduna2.png')}
+                  style={[
+                    styles.video,
+                    {width: 300, height: 100, marginTop: 20},
+                  ]}></Image>
+                <Image
+                  source={require('../images/awspartner.png')}
+                  style={[
+                    styles.video,
+                    {width: 200, height: 150, marginTop: 20},
+                  ]}></Image>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    {
+                      color: 'darkblue',
+                      marginTop: 70,
+                    },
+                  ]}>
+                  Touch anywhere to dismiss
+                </Text>
+              </Modal>
+            </View>
+          ) : null}
+          {popup ? (
+            <View>
+              <Modal
+                style={[styles.settings]}
+                transparent={false}
+                isVisible={popup}>
+                <View style={styles.container}>
+                  <Text style={[styles.techtext]}>{tasks[state].tech}</Text>
+                  <Text
+                    style={[
+                      styles.text,
+                      {
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      },
+                    ]}>
+                    {tasks[state].name.replace(/\n/g, ' ')}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.subtext,
+                      {
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      },
+                    ]}>
+                    {'\n'}
+                    {tasks[state].prompt}
+                    {'\n\n'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.text,
+                      {
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      },
+                    ]}>
+                    Result:
+                    {'\n'}
+                  </Text>
+                  {tasks[state].status == -4 ? (
+                    <View style={styles.icon}>
+                      <ActivityIndicator color={'blue'} size="large" />
+                    </View>
+                  ) : (
+                    <Image
+                      source={tasks[state].icon}
+                      style={styles.icon}></Image>
+                  )}
+                  <Text
+                    style={[
+                      styles.text,
+                      {
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      },
+                    ]}>
+                    {tasks[state].desc}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      var final = state + 1;
+                      for (let i = state + 1; i < tasks.length; i++) {
+                        if (tasks[i] && tasks[i].active) {
+                          console.log('Got i: ', i);
+                          final = i;
+                          if (tasks[i].tag == 'facial') {
+                            preFacial = true;
+                          }
+                          break;
+                        } else {
+                          updateStatus(i, 'unused');
+                          console.log('Unusing ', i);
+                        }
+                      }
+                      alterState(final);
+                      setPopup(false);
                     }}
-                    onChangeFormattedText={text => {
-                      //console.log("onChangeFormattedText: ", text)
-                      //setInputNumber(text);
+                    style={[styles.button, styles.enabledButton]}>
+                    <Text style={styles.buttonText}>Continue</Text>
+                  </TouchableOpacity>
+                </View>
+                <View>
+                  <TouchableOpacity onPress={reset}>
+                    <Image
+                      style={[
+                        styles.smallIcon,
+                        {marginRight: 0, marginLeft: '90%'},
+                      ]}
+                      source={require('../images/cancel.png')}></Image>
+                  </TouchableOpacity>
+                </View>
+              </Modal>
+            </View>
+          ) : null}
+          {settings ? (
+            <View>
+              <Modal
+                style={[styles.settings]}
+                transparent={false}
+                isVisible={settings}>
+                <Text style={[styles.absoluteText, {color: 'black'}]}>
+                  v{ver}
+                </Text>
+                <Text
+                  style={[
+                    styles.text,
+                    {
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    },
+                  ]}>
+                  Settings
+                </Text>
+                <View style={{height: 80}}>
+                  {countryCode ? (
+                    <PhoneInput
+                      containerStyle={[styles.phone]}
+                      defaultValue={inputNumber} //defaultNumber}
+                      defaultCode={countryCode} //global.myCountry}
+                      textInputProps={{returnKeyType: 'done'}}
+                      onChangeText={text => {
+                        console.log('onChangeText: ', text);
+                        setInputNumber(text);
+                      }}
+                      onChangeFormattedText={text => {
+                        //console.log("onChangeFormattedText: ", text)
+                        //setInputNumber(text);
+                      }}
+                      onChangeCountry={text => {
+                        setCountryCode(text.cca2);
+                      }}
+                      withDarkTheme
+                      withShadow
+                    />
+                  ) : null}
+                </View>
+                {0 ? (
+                  <BouncyCheckbox
+                    key={-1}
+                    size={30}
+                    text={'Use Fast Mode'}
+                    isChecked={fast}
+                    innerIconStyle={{borderWidth: 4}}
+                    textStyle={{
+                      textDecorationLine: 'none',
+                      fontSize: 30,
                     }}
-                    onChangeCountry={text => {
-                      setCountryCode(text.cca2);
+                    style={{
+                      width: '90%',
+                      marginTop: 20,
+                      marginLeft: -10,
                     }}
-                    withDarkTheme
-                    withShadow
+                    onPress={(isChecked: boolean) => {
+                      setFast(isChecked);
+                    }}
                   />
-                )}
-              </View>
-              {0 ? (
+                ) : null}
                 <BouncyCheckbox
-                  key={-1}
+                  key={-2}
                   size={30}
-                  text={'Use Fast Mode'}
-                  isChecked={fast}
+                  text={'Demo Mode'}
+                  isChecked={demo}
                   innerIconStyle={{borderWidth: 4}}
                   textStyle={{
                     textDecorationLine: 'none',
@@ -1445,114 +1474,126 @@ function MainScreen(): React.JSX.Element {
                   }}
                   style={{
                     width: '90%',
-                    marginTop: 20,
+                    marginTop: 10,
                     marginLeft: -10,
                   }}
                   onPress={(isChecked: boolean) => {
-                    setFast(isChecked);
+                    setDemo(isChecked);
+                    if (isChecked) {
+                      setSandbox(false);
+                    }
                   }}
                 />
-              ) : null}
-              <BouncyCheckbox
-                key={-2}
-                size={30}
-                text={'Demo Mode'}
-                isChecked={demo}
-                innerIconStyle={{borderWidth: 4}}
-                textStyle={{
-                  textDecorationLine: 'none',
-                  fontSize: 30,
-                }}
-                style={{
-                  width: '90%',
-                  marginTop: 10,
-                  marginLeft: -10,
-                }}
-                onPress={(isChecked: boolean) => {
-                  setDemo(isChecked);
-                  if (isChecked) {
-                    setSandbox(false);
-                  }
+                {
+                  <BouncyCheckbox
+                    key={-3}
+                    size={30}
+                    text={'Fail Silent Auth'}
+                    isChecked={failure}
+                    innerIconStyle={{borderWidth: 4}}
+                    textStyle={{
+                      textDecorationLine: 'none',
+                      fontSize: 30,
+                    }}
+                    style={{
+                      width: '90%',
+                      marginTop: 10,
+                      marginLeft: -10,
+                    }}
+                    onPress={(isChecked: boolean) => {
+                      console.log('Setting failure in gui to ', isChecked);
+                      setFailure(isChecked);
+                      gFailure = isChecked;
+                    }}
+                  />
+                }
+                {0 ? (
+                  <BouncyCheckbox
+                    key={-4}
+                    size={30}
+                    text={'Light the Light'}
+                    isChecked={light}
+                    innerIconStyle={{borderWidth: 4}}
+                    textStyle={{
+                      textDecorationLine: 'none',
+                      fontSize: 30,
+                    }}
+                    style={{
+                      width: '90%',
+                      marginTop: 10,
+                      marginBottom: 10,
+                      marginLeft: -10,
+                    }}
+                    onPress={(isChecked: boolean) => {
+                      setLight(isChecked);
+                    }}
+                  />
+                ) : null}
+                {tasks.map(task => {
+                  var name = task.name.replace(/\n/g, ' ');
+                  return (
+                    <View>
+                      <BouncyCheckbox
+                        key={task.id}
+                        size={25}
+                        text={'Use ' + name}
+                        isChecked={task.active}
+                        innerIconStyle={{borderWidth: 4}}
+                        textStyle={{
+                          textDecorationLine: 'none',
+                          fontSize: 25,
+                        }}
+                        style={{width: '90%', marginTop: 16, marginLeft: 20}}
+                        onPress={(isChecked: boolean) => {
+                          task.active = isChecked;
+                        }}></BouncyCheckbox>
+                    </View>
+                  );
+                })}
+                <View style={{width: 100, marginTop: 30}}>
+                  <Button
+                    title="Done"
+                    onPress={() => {
+                      saveSettings();
+                    }}
+                  />
+                </View>
+              </Modal>
+            </View>
+          ) : null}
+          {startsplash || showVideo ? (
+            <View
+              style={[
+                styles.container,
+                {
+                  backgroundColor: isDarkMode ? Colors.black : '',
+                },
+              ]}>
+              <Video
+                source={endVideo}
+                paused={false}
+                style={styles.video}
+                repeat={false}
+              />
+            </View>
+          ) : (
+            <View
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+              style={[
+                styles.container,
+                {
+                  backgroundColor: isDarkMode ? Colors.black : '',
+                },
+              ]}>
+              <Header
+                onData={() => {
+                  console.log('Splashing');
+                  setSplash(true);
                 }}
               />
-              {
-                <BouncyCheckbox
-                  key={-3}
-                  size={30}
-                  text={'Fail Silent Auth'}
-                  isChecked={failure}
-                  innerIconStyle={{borderWidth: 4}}
-                  textStyle={{
-                    textDecorationLine: 'none',
-                    fontSize: 30,
-                  }}
-                  style={{
-                    width: '90%',
-                    marginTop: 10,
-                    marginLeft: -10,
-                  }}
-                  onPress={(isChecked: boolean) => {
-                    console.log('Setting failure in gui to ', isChecked);
-                    setFailure(isChecked);
-                    gFailure = isChecked;
-                  }}
-                />
-              }
-              {0 ? (
-                <BouncyCheckbox
-                  key={-4}
-                  size={30}
-                  text={'Light the Light'}
-                  isChecked={light}
-                  innerIconStyle={{borderWidth: 4}}
-                  textStyle={{
-                    textDecorationLine: 'none',
-                    fontSize: 30,
-                  }}
-                  style={{
-                    width: '90%',
-                    marginTop: 10,
-                    marginBottom: 10,
-                    marginLeft: -10,
-                  }}
-                  onPress={(isChecked: boolean) => {
-                    setLight(isChecked);
-                  }}
-                />
-              ) : null}
-              {tasks.map(task => {
-                var name = task.name.replace(/\n/g, ' ');
-                return (
-                  <View>
-                    <BouncyCheckbox
-                      key={task.id}
-                      size={25}
-                      text={'Use ' + name}
-                      isChecked={task.active}
-                      innerIconStyle={{borderWidth: 4}}
-                      textStyle={{
-                        textDecorationLine: 'none',
-                        fontSize: 25,
-                      }}
-                      style={{width: '90%', marginTop: 16, marginLeft: 20}}
-                      onPress={(isChecked: boolean) => {
-                        task.active = isChecked;
-                      }}></BouncyCheckbox>
-                  </View>
-                );
-              })}
-              <View style={{width: 100, marginTop: 30}}>
-                <Button
-                  title="Done"
-                  onPress={() => {
-                    saveSettings();
-                  }}
-                />
-              </View>
-            </Modal>
-          </View>
-        ) : null}
-        {startsplash || showVideo ? (
+            </View>
+          )}
           <View
             style={[
               styles.container,
@@ -1560,99 +1601,68 @@ function MainScreen(): React.JSX.Element {
                 backgroundColor: isDarkMode ? Colors.black : '',
               },
             ]}>
-            <Video
-              source={endVideo}
-              paused={false}
-              style={styles.video}
-              repeat={false}
-            />
+            <TouchableOpacity
+              onPress={loginHandler}
+              style={[
+                styles.button,
+                isPhoneNumberValidState && !inProcess
+                  ? styles.enabledButton
+                  : styles.disabledButton,
+              ]}
+              disabled={!isPhoneNumberValidState}>
+              {skin === 'vault' ? (
+                <Text style={styles.buttonText}>Enter the Vault</Text>
+              ) : (
+                <Text style={styles.buttonText}>{cbutton}</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        ) : (
           <View
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             style={[
-              styles.container,
+              styles.citem,
               {
                 backgroundColor: isDarkMode ? Colors.black : '',
               },
             ]}>
-            <Header
-              onData={() => {
-                console.log('Splashing');
-                setSplash(true);
-              }}
-            />
+            {tasks.map(task => {
+              //if (task && task.active) console.log('Mapped Task: ', task);
+              if (task && task.active)
+                return (
+                  <Section key={100 + task.id}>
+                    <FraudCheck
+                      value={task.status}
+                      title={task.name}
+                      description={task.desc}
+                    />
+                  </Section>
+                );
+            })}
           </View>
-        )}
-        <View
-          style={[
-            styles.container,
-            {
-              backgroundColor: isDarkMode ? Colors.black : '',
-            },
-          ]}>
-          <TouchableOpacity
-            onPress={loginHandler}
+          <View
             style={[
-              styles.button,
-              isPhoneNumberValidState && !inProcess
-                ? styles.enabledButton
-                : styles.disabledButton,
-            ]}
-            disabled={!isPhoneNumberValidState}>
-            {skin === 'vault' ? (
-              <Text style={styles.buttonText}>Enter the Vault</Text>
-            ) : (
-              <Text style={styles.buttonText}>{cbutton}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-        <View
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          style={[
-            styles.citem,
-            {
-              backgroundColor: isDarkMode ? Colors.black : '',
-            },
-          ]}>
-          {tasks.map(task => {
-            //if (task && task.active) console.log('Mapped Task: ', task);
-            if (task && task.active)
-              return (
-                <Section key={100 + task.id}>
-                  <FraudCheck
-                    value={task.status}
-                    title={task.name}
-                    description={task.desc}
-                  />
-                </Section>
-              );
-          })}
-        </View>
-        <View
-          style={[
-            styles.container,
-            styles.buttonContainer,
-            {
-              backgroundColor: isDarkMode ? Colors.black : '',
-            },
-          ]}>
-          <TouchableOpacity onPress={() => reset(true)}>
-            <Image
-              style={[styles.smallIcon, {width: 40}]}
-              source={require('../images/resetw.png')}></Image>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              setSettings(true);
-            }}>
-            <Image
-              style={[styles.smallIcon]}
-              source={require('../images/settingsw.png')}></Image>
-          </TouchableOpacity>
-        </View>
+              styles.container,
+              styles.buttonContainer,
+              {
+                backgroundColor: isDarkMode ? Colors.black : '',
+              },
+            ]}>
+            <TouchableOpacity onPress={() => reset(true)}>
+              <Image
+                style={[styles.smallIcon, {width: 40}]}
+                source={require('../images/resetw.png')}></Image>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setSettings(true);
+              }}>
+              <Image
+                style={[styles.smallIcon]}
+                source={require('../images/settingsw.png')}></Image>
+            </TouchableOpacity>
+          </View>
+        </ImageBackground>
       </ScrollView>
     </SafeAreaView>
   );
