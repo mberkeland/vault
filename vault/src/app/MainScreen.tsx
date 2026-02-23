@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.12';
+const ver = '2.13';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -376,6 +376,13 @@ function MainScreen(): React.JSX.Element {
     }
   }
   async function getStep(index) {
+    let body = {
+      phone: '' + gPhone,
+      product: 'vault',
+      id: deviceId,
+      sandbox: sandbox,
+      demo: demo,
+    };
     if (index == null || !tasks[index].active) {
       console.log('Not using ', index);
       updateStatus(index, 'unused', 'Unused');
@@ -385,13 +392,6 @@ function MainScreen(): React.JSX.Element {
     console.log('in getStep for index ', index, demo);
     updateStatus(index, 'checking');
 
-    let body = {
-      phone: '' + gPhone,
-      product: 'vault',
-      id: deviceId,
-      sandbox: sandbox,
-      demo: demo,
-    };
     if (index == 0 || tasks[index].tag == 'location') {
       console.log('Adding location to request body: ', myLoc);
       body.location = myLoc;
@@ -402,8 +402,8 @@ function MainScreen(): React.JSX.Element {
             methods.push(task.name.replace('\n', ' '));
           }
         });
+        body.methods = methods;
       }
-      body.methods = methods;
     }
     if (!demo || tasks[index].tag == 'ai') {
       if (sandbox && tasks[index].tag == 'nv') {
@@ -982,6 +982,24 @@ function MainScreen(): React.JSX.Element {
       // Special case for call first
       await getStep(0);
     } else {
+      // No AI call, so Send message to get propagated to GUI...
+      console.log('No AI< start web GUI stuff ');
+      var obj = tasks[0];
+      var methods = [];
+      tasks.map(task => {
+        if (task.id && task.active) {
+          methods.push(task.name.replace('\n', ' '));
+        }
+      });
+
+      obj.methods = methods;
+      //      obj.desc = description;
+      //      obj.status = status;
+      obj.deviceId = deviceId;
+      obj.phone = '' + gPhone;
+      obj.sessionId = sessionId;
+
+      sendResults(obj);
       looper();
     }
   };
