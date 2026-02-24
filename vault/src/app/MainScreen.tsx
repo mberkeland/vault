@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.14';
+const ver = '2.15';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -35,7 +35,6 @@ import {
   PusherChannel,
   PusherEvent,
 } from '@pusher/pusher-websocket-react-native';
-
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 import BouncyCheckbox from 'react-native-bouncy-checkbox';
 import {styles} from './styles';
@@ -56,7 +55,38 @@ import tvideof from '../images/TBVaultFail.mp4';
 import bedimage from '../images/bedrock.jpg';
 import {request, requestMultiple, PERMISSIONS} from 'react-native-permissions';
 import Sound from 'react-native-sound';
+import {SelectCountry} from 'react-native-element-dropdown';
 
+var languages = [
+  {
+    value: 'en',
+    lable: 'English',
+  },
+  {
+    value: 'es',
+    lable: 'Spanish',
+  },
+  {
+    value: 'fr',
+    lable: 'French',
+  },
+  {
+    value: 'it',
+    lable: 'Italian',
+  },
+  {
+    value: 'de',
+    lable: 'German',
+  },
+  {
+    value: 'pt',
+    lable: 'Portuguese',
+  },
+  {
+    value: 'hi',
+    lable: 'Hindi',
+  },
+];
 const eventEmitter = new NativeEventEmitter(NativeModules.EventEmitter);
 const {VonageVerifySilentAuthModule, ClientManager} = NativeModules;
 const pusher = Pusher.getInstance();
@@ -211,6 +241,7 @@ function MainScreen(): React.JSX.Element {
   const [failure, setFailure] = useState(false);
   const [front, setFront] = useState(true);
   const [deeper, setDeeper] = useState(false);
+  const [lang, setLang] = useState('en');
   console.log('Render with state: ', state, 'failure: ', failure);
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 265;
@@ -292,6 +323,9 @@ function MainScreen(): React.JSX.Element {
     if (data.prompt) {
       gcallto = data.prompt;
       AsyncStorage.setItem('@callto', gcallto);
+    }
+    if (data.languages) {
+      languages = data.languages;
     }
   }
   function updateStatus(index, results, desc = '') {
@@ -403,6 +437,7 @@ function MainScreen(): React.JSX.Element {
           }
         });
         body.methods = methods;
+        body.lang = lang;
       }
     }
     if (!demo || tasks[index].tag == 'ai') {
@@ -713,6 +748,13 @@ function MainScreen(): React.JSX.Element {
       if (val === 'false') {
         setLight(false);
       }
+      val = await AsyncStorage.getItem('lang');
+      if (val) {
+        console.log('Got lang: ', val);
+        setLang(val);
+      } else {
+        console.log('No stored lang, use: ', lang);
+      }
       tasks.map(async task => {
         val = await AsyncStorage.getItem(task.tag);
         if (val === 'false') {
@@ -863,6 +905,7 @@ function MainScreen(): React.JSX.Element {
     AsyncStorage.setItem('sandbox', '' + sandbox);
     AsyncStorage.setItem('light', '' + light);
     AsyncStorage.setItem('failure', '' + failure);
+    AsyncStorage.setItem('lang', '' + lang);
     setFailure(failure);
     gFailure = failure;
     AsyncStorage.setItem('sandbox', '' + sandbox);
@@ -1418,7 +1461,7 @@ function MainScreen(): React.JSX.Element {
                   ]}>
                   Settings
                 </Text>
-                <View style={{height: 80}}>
+                <View style={{height: 180}}>
                   {countryCode ? (
                     <PhoneInput
                       containerStyle={[styles.phone]}
@@ -1438,6 +1481,27 @@ function MainScreen(): React.JSX.Element {
                       }}
                       withDarkTheme
                       withShadow
+                    />
+                  ) : null}
+                  {lang ? (
+                    <SelectCountry
+                      style={styles.dropdown}
+                      selectedTextStyle={styles.selectedTextStyle}
+                      placeholderStyle={styles.placeholderStyle}
+                      imageStyle={styles.imageStyle}
+                      iconStyle={styles.iconStyle}
+                      maxHeight={500}
+                      value={lang}
+                      data={languages}
+                      valueField="value"
+                      labelField="lable"
+                      placeholder="Language"
+                      searchPlaceholder="Search..."
+                      onChange={e => {
+                        console.log('Setting lang: ', e.value);
+                        setLang(e.value);
+                        AsyncStorage.setItem('lang', '' + lang);
+                      }}
                     />
                   ) : null}
                 </View>
@@ -1634,7 +1698,7 @@ function MainScreen(): React.JSX.Element {
                     <FraudCheck
                       value={task.status}
                       title={task.name}
-                      description={task.desc}
+                      description={task.id ? task.desc : ''}
                     />
                   </Section>
                 );

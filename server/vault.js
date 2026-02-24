@@ -579,6 +579,8 @@ app.post("/getAi", async (req, res) => {
   var results = "allow";
   var deviceId = req.body.id;
   var methods = req.body.methods;
+  var lang = req.body.lang??'en';
+
   var jwt = null;
   if (!phone) {
     console.log("No phone passed in.");
@@ -620,7 +622,7 @@ app.post("/getAi", async (req, res) => {
   */
 
   var ai = "30";//"19895281169";
-  await vcrstate.set('' + phone, { deviceId: deviceId, phone: phone, methods: methods })
+  await vcrstate.set('' + phone, { deviceId: deviceId, phone: phone, methods: methods, lang: lang })
   console.log("Set vcrstate for phone ", phone, " to deviceId: ", deviceId);
   var stuff = await vcrstate.get('' + phone);
   console.log("vcrstate get returned: ", stuff, stuff.phone);
@@ -694,10 +696,12 @@ app.get("/answer", async (req, res) => {
   var promptId = req.query.to;
   var stream = req.query.streamid;
   var stuff = await vcrstate.get('' + req.query.from_user);
+  var lang = 'en';
   if (stuff && stuff.deviceId) {
     stream = stuff.deviceId;
+    lang = stuff.lang??'en';
   }
-  let url = ws_url + "/socket?uid=" + uuid + "&streamid=" + stream + "&orig_uuid=" + uuid + "&region=us&promptId=" + promptId + "&video=1&usefilter=" + 1
+  let url = ws_url + "/socket?uid=" + uuid + "&streamid=" + stream + "&orig_uuid=" + uuid + "&region=us&promptId=" + promptId + "&video=1&usefilter=" + 1+"&voice="+lang;
   var ncco = [
     {
       action: "connect",
