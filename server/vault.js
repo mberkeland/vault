@@ -296,7 +296,7 @@ app.post("/checkAuthentication", async (req, res) => {
       if (stuff) {
         console.log("got Stuff on checkAuthentication", stuff)
         obj = stuff;
-        if (Object.hasOwn(obj, "result") && (obj.count >= obj.methods.length)) {
+        if (obj && Object.hasOwn(obj, "result") && obj.methods?.length && (obj.count >= obj.methods?.length)) {
           clearInterval(interval);
           console.log("Returning Got AI checkAuthentication request", obj);
           return res.status(200).json(obj).end();
@@ -578,7 +578,7 @@ app.post("/getAi", async (req, res) => {
   var phone = req.body.phone.replace(/\D/g, "");
   var results = "allow";
   var deviceId = req.body.id;
-  var methods = req.body.methods;
+  var methods = req.body.methods ?? [];
   var lang = req.body.lang??'en';
 
   var jwt = null;

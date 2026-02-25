@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.15';
+const ver = '2.16';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -87,6 +87,73 @@ var languages = [
     lable: 'Hindi',
   },
 ];
+var translations = {
+  en: {
+    'AI\nAssistant': 'AI\nAssistant',
+    'Call the Vault AI Assistant': 'Call the Vault AI Assistant',
+    'SIM\nSwap': 'SIM\nSwap',
+    'Checking to see if number recently moved to another SIM':
+      'Checking to see if number recently moved to another SIM',
+    'Silent\nAuthentication': 'Silent\nAuthentication',
+    'Silently verifying that this phone is the number expected':
+      'Silently verifying that this phone is the number expected',
+    'Device\nLocation': 'Device\nLocation',
+    'Checking to see that the phone is in the location expected':
+      'Checking to see that the phone is in the location expected',
+    'Fraud\nDefender': 'Fraud\nDefender',
+    'Using Vonage Fraud APIs to check for likely fraudulent numbers':
+      'Using Vonage Fraud APIs to check for likely fraudulent numbers',
+    'Facial\nLiveness': 'Facial\nLiveness',
+    'Checking ‘Facial Liveness’ to prevent pictures or AI bots':
+      'Checking ‘Facial Liveness’ to prevent pictures or AI bots',
+    Settings: 'Settings',
+    'Call to speak to our agent': 'Call to speak to our agent',
+    Done: 'Done',
+    'Demo Mode': 'Demo Mode',
+    'Fail Silent Auth': 'Fail Silent Auth',
+    'Light the Light': 'Light the Light',
+    Use: 'Use',
+    closer: "Let's look closer at what's happening in the background...",
+    'Trusted Bank': 'Trusted Bank',
+    Call: 'Call',
+    'Call Trusted Bank': 'Call Trusted Bank',
+    'In Call': 'In Call',
+    'End Call': 'End Call',
+  },
+  es: {
+    'AI\nAssistant': 'Asistente\nde IA',
+    'Call the Vault AI Assistant': 'Llame al Asistente de IA de Vault',
+    'SIM\nSwap': 'Intercambio\nde SIM',
+    'Checking to see if number recently moved to another SIM':
+      'Cómo comprobar si el número se ha trasladado recientemente a otra tarjeta SIM',
+    'Silent\nAuthentication': 'Silent\nAuthentication',
+    'Silently verifying that this phone is the number expected':
+      'Verificando silenciosamente que este teléfono es el número esperado',
+    'Device\nLocation': 'Ubicación\ndel dispositivo',
+    'Checking to see that the phone is in the location expected':
+      'Comprobación de que el teléfono se encuentra en la ubicación esperada',
+    'Fraud\nDefender': 'Fraud\nDefender',
+    'Using Vonage Fraud APIs to check for likely fraudulent numbers':
+      'Uso de las API de fraude de Vonage para verificar posibles números fraudulentos',
+    'Facial\nLiveness': 'Vivacidad\nFacial',
+    'Checking ‘Facial Liveness’ to prevent pictures or AI bots':
+      'Comprobación de la vitalidad facial para evitar imágenes o bots de IA',
+    Settings: 'Ajustes',
+    'Call to speak to our agent': 'Llama para hablar con nuestro agente',
+    Done: 'Hecho',
+    'Demo Mode': 'Modo de demostración',
+    'Fail Silent Auth': 'Fallo de Silent Auth',
+    'Light the Light': 'Light the Light',
+    Use: 'Usar',
+    closer: 'Veamos más de cerca lo que sucede en segundo plano...',
+    'Trusted Bank': 'Trusted Bank',
+    Call: 'Llamar',
+    'Call Trusted Bank': 'Llamar Trusted Bank',
+    'In Call': 'En llamada',
+    'End Call': 'Finalizar llamada',
+  },
+};
+var tt = translations.en;
 const eventEmitter = new NativeEventEmitter(NativeModules.EventEmitter);
 const {VonageVerifySilentAuthModule, ClientManager} = NativeModules;
 const pusher = Pusher.getInstance();
@@ -202,7 +269,7 @@ function MainScreen(): React.JSX.Element {
               color: Colors.white,
             },
           ]}>
-          Trusted Bank
+          {t('Trusted Bank')}
         </Text>
         <Image
           style={{width: 150, height: 150, marginLeft: 20, marginTop: 20}}
@@ -214,6 +281,7 @@ function MainScreen(): React.JSX.Element {
       </View>
     );
   };
+  const [translation, setTranslation] = useState(translations.en);
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
   const [inputNumber, setInputNumber] = useState(null);
@@ -234,7 +302,7 @@ function MainScreen(): React.JSX.Element {
   const [splash, setSplash] = useState(false);
   const [light, setLight] = useState(true);
   const [skin, setSkin] = useState('vault');
-  const [cbutton, setCbutton] = useState('Call Trusted Bank');
+  const [cbutton, setCbutton] = useState(t('Call Trusted Bank'));
   const [inCall, setInCall] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [startsplash, setStartSplash] = useState(false);
@@ -242,6 +310,7 @@ function MainScreen(): React.JSX.Element {
   const [front, setFront] = useState(true);
   const [deeper, setDeeper] = useState(false);
   const [lang, setLang] = useState('en');
+
   console.log('Render with state: ', state, 'failure: ', failure);
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 265;
@@ -278,6 +347,9 @@ function MainScreen(): React.JSX.Element {
     console.log('stopFacial, state: ', state);
     onMessage('cancelled:0:55');
   };
+  function t(phrase) {
+    return tt[phrase] ?? phrase;
+  }
 
   async function startup() {
     await AsyncStorage.getItem('@skin').then(value => {
@@ -405,7 +477,7 @@ function MainScreen(): React.JSX.Element {
         const callId = ClientManager.makeCall(gcallto);
         console.log('CallId 2: ', callId);
         //playVideo();
-        updateStatus(0, 'allow', 'In Call');
+        updateStatus(0, 'allow', t('In Call'));
       }
     }
   }
@@ -750,8 +822,16 @@ function MainScreen(): React.JSX.Element {
       }
       val = await AsyncStorage.getItem('lang');
       if (val) {
-        console.log('Got lang: ', val);
+        console.log('Got lang: ', val, val in translations);
         setLang(val);
+        if (val in translations) {
+          console.log('Setting translation to ', val);
+          setTranslation(translations[val]);
+          tt = translations[val];
+          setCbutton(
+            translations[val]['Call Trusted Bank'] ?? 'Call Trusted Bank',
+          );
+        }
       } else {
         console.log('No stored lang, use: ', lang);
       }
@@ -796,7 +876,7 @@ function MainScreen(): React.JSX.Element {
             const callId = ClientManager.makeCall(gcallto);
             console.log('CallId: ', callId);
             //playVideo();
-            updateStatus(0, 'allow', 'In Call');
+            updateStatus(0, 'allow', t('In Call'));
           }
 
           //this.setState({button: 'Call'});
@@ -807,16 +887,19 @@ function MainScreen(): React.JSX.Element {
         const state = data.state;
         console.log('Got state change: ', state);
         if (state == 'On Call') {
-          console.log('Setting inCall to true');
+          var txt = t('End Call');
+          console.log('Setting inCall to true, ', txt);
           setInCall(true);
-          setCbutton('End Call');
+          setCbutton(txt);
         } else if (state == 'Idle') {
-          console.log('Setting inCall to false');
+          var txt = t('Call Trusted Bank');
+          console.log('Setting inCall to false', txt);
           setInCall(false);
-          setCbutton('Call Trusted Bank');
+          setCbutton(txt);
         }
       });
     }
+    setCbutton(t('Call Trusted Bank'));
   }, []);
   useEffect(() => {
     console.log('In useEffect for number stuff: ', inputNumber, countryCode);
@@ -947,7 +1030,6 @@ function MainScreen(): React.JSX.Element {
       return;
     }
     console.log('Not null');
-    var name = tasks[state].name.replace(/\n/g, ' ');
     setPopup(true);
     console.log('DoneshowDialog for ', state);
   };
@@ -1026,7 +1108,7 @@ function MainScreen(): React.JSX.Element {
       await getStep(0);
     } else {
       // No AI call, so Send message to get propagated to GUI...
-      console.log('No AI< start web GUI stuff ');
+      console.log('No AI, start web GUI stuff ');
       var obj = tasks[0];
       var methods = [];
       tasks.map(task => {
@@ -1193,7 +1275,7 @@ function MainScreen(): React.JSX.Element {
                         styles.buttonText,
                         {fontSize: 25, textAlign: 'center'},
                       ]}>
-                      Let's look closer at what's happening in the background...
+                      {t('closer')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1226,7 +1308,7 @@ function MainScreen(): React.JSX.Element {
                         marginTop: 80,
                       },
                     ]}>
-                    Trusted Bank
+                    {t('Trusted Bank')}
                   </Text>
                   <Image
                     source={require('../images/TBLogo-B.png')}
@@ -1242,7 +1324,7 @@ function MainScreen(): React.JSX.Element {
                         marginTop: 50,
                       },
                     ]}>
-                    Call to speak to our agent
+                    {t('Call to speak to our agent')}
                   </Text>
                   <View style={{flexDirection: 'row', marginTop: 20}}>
                     <TouchableOpacity
@@ -1459,7 +1541,7 @@ function MainScreen(): React.JSX.Element {
                       color: isDarkMode ? Colors.white : Colors.black,
                     },
                   ]}>
-                  Settings
+                  {t('Settings')}
                 </Text>
                 <View style={{height: 180}}>
                   {countryCode ? (
@@ -1501,6 +1583,15 @@ function MainScreen(): React.JSX.Element {
                         console.log('Setting lang: ', e.value);
                         setLang(e.value);
                         AsyncStorage.setItem('lang', '' + lang);
+                        if (e.value in translations) {
+                          console.log('Setting translation to ', e.value);
+                          setTranslation(translations[e.value]);
+                          tt = translations[e.value];
+                          setCbutton(
+                            translations[e.value]['Call Trusted Bank'] ??
+                              'Call Trusted Bank',
+                          );
+                        }
                       }}
                     />
                   ) : null}
@@ -1509,7 +1600,7 @@ function MainScreen(): React.JSX.Element {
                   <BouncyCheckbox
                     key={-1}
                     size={30}
-                    text={'Use Fast Mode'}
+                    text={t('Use') + ' ' + t('Fast Mode')}
                     isChecked={fast}
                     innerIconStyle={{borderWidth: 4}}
                     textStyle={{
@@ -1529,7 +1620,7 @@ function MainScreen(): React.JSX.Element {
                 <BouncyCheckbox
                   key={-2}
                   size={30}
-                  text={'Demo Mode'}
+                  text={t('Demo Mode')}
                   isChecked={demo}
                   innerIconStyle={{borderWidth: 4}}
                   textStyle={{
@@ -1552,7 +1643,7 @@ function MainScreen(): React.JSX.Element {
                   <BouncyCheckbox
                     key={-3}
                     size={30}
-                    text={'Fail Silent Auth'}
+                    text={t('Fail Silent Auth')}
                     isChecked={failure}
                     innerIconStyle={{borderWidth: 4}}
                     textStyle={{
@@ -1575,7 +1666,7 @@ function MainScreen(): React.JSX.Element {
                   <BouncyCheckbox
                     key={-4}
                     size={30}
-                    text={'Light the Light'}
+                    text={t('Light the Light')}
                     isChecked={light}
                     innerIconStyle={{borderWidth: 4}}
                     textStyle={{
@@ -1594,13 +1685,14 @@ function MainScreen(): React.JSX.Element {
                   />
                 ) : null}
                 {tasks.map(task => {
-                  var name = task.name.replace(/\n/g, ' ');
+                  var tname = t(task.name);
+                  var name = tname.replace(/\n/g, ' ');
                   return (
                     <View>
                       <BouncyCheckbox
                         key={task.id}
                         size={25}
-                        text={'Use ' + name}
+                        text={name}
                         isChecked={task.active}
                         innerIconStyle={{borderWidth: 4}}
                         textStyle={{
@@ -1616,7 +1708,7 @@ function MainScreen(): React.JSX.Element {
                 })}
                 <View style={{width: 100, marginTop: 30}}>
                   <Button
-                    title="Done"
+                    title={t('Done')}
                     onPress={() => {
                       saveSettings();
                     }}
@@ -1697,8 +1789,8 @@ function MainScreen(): React.JSX.Element {
                   <Section key={100 + task.id}>
                     <FraudCheck
                       value={task.status}
-                      title={task.name}
-                      description={task.id ? task.desc : ''}
+                      title={t(task.name)}
+                      description={task.id ? t(task.desc) : ''}
                     />
                   </Section>
                 );

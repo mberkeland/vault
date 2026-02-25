@@ -115,6 +115,7 @@ export const styles = StyleSheet.create({
     borderColor: '#fff',
   },
   buttonText: {
+    textAlign: 'center',
     fontWeight: 'bold',
     color: 'white',
   },
