@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.16';
+const ver = '2.17';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -87,73 +87,11 @@ var languages = [
     lable: 'Hindi',
   },
 ];
-var translations = {
-  en: {
-    'AI\nAssistant': 'AI\nAssistant',
-    'Call the Vault AI Assistant': 'Call the Vault AI Assistant',
-    'SIM\nSwap': 'SIM\nSwap',
-    'Checking to see if number recently moved to another SIM':
-      'Checking to see if number recently moved to another SIM',
-    'Silent\nAuthentication': 'Silent\nAuthentication',
-    'Silently verifying that this phone is the number expected':
-      'Silently verifying that this phone is the number expected',
-    'Device\nLocation': 'Device\nLocation',
-    'Checking to see that the phone is in the location expected':
-      'Checking to see that the phone is in the location expected',
-    'Fraud\nDefender': 'Fraud\nDefender',
-    'Using Vonage Fraud APIs to check for likely fraudulent numbers':
-      'Using Vonage Fraud APIs to check for likely fraudulent numbers',
-    'Facial\nLiveness': 'Facial\nLiveness',
-    'Checking ‘Facial Liveness’ to prevent pictures or AI bots':
-      'Checking ‘Facial Liveness’ to prevent pictures or AI bots',
-    Settings: 'Settings',
-    'Call to speak to our agent': 'Call to speak to our agent',
-    Done: 'Done',
-    'Demo Mode': 'Demo Mode',
-    'Fail Silent Auth': 'Fail Silent Auth',
-    'Light the Light': 'Light the Light',
-    Use: 'Use',
-    closer: "Let's look closer at what's happening in the background...",
-    'Trusted Bank': 'Trusted Bank',
-    Call: 'Call',
-    'Call Trusted Bank': 'Call Trusted Bank',
-    'In Call': 'In Call',
-    'End Call': 'End Call',
-  },
-  es: {
-    'AI\nAssistant': 'Asistente\nde IA',
-    'Call the Vault AI Assistant': 'Llame al Asistente de IA de Vault',
-    'SIM\nSwap': 'Intercambio\nde SIM',
-    'Checking to see if number recently moved to another SIM':
-      'Cómo comprobar si el número se ha trasladado recientemente a otra tarjeta SIM',
-    'Silent\nAuthentication': 'Silent\nAuthentication',
-    'Silently verifying that this phone is the number expected':
-      'Verificando silenciosamente que este teléfono es el número esperado',
-    'Device\nLocation': 'Ubicación\ndel dispositivo',
-    'Checking to see that the phone is in the location expected':
-      'Comprobación de que el teléfono se encuentra en la ubicación esperada',
-    'Fraud\nDefender': 'Fraud\nDefender',
-    'Using Vonage Fraud APIs to check for likely fraudulent numbers':
-      'Uso de las API de fraude de Vonage para verificar posibles números fraudulentos',
-    'Facial\nLiveness': 'Vivacidad\nFacial',
-    'Checking ‘Facial Liveness’ to prevent pictures or AI bots':
-      'Comprobación de la vitalidad facial para evitar imágenes o bots de IA',
-    Settings: 'Ajustes',
-    'Call to speak to our agent': 'Llama para hablar con nuestro agente',
-    Done: 'Hecho',
-    'Demo Mode': 'Modo de demostración',
-    'Fail Silent Auth': 'Fallo de Silent Auth',
-    'Light the Light': 'Light the Light',
-    Use: 'Usar',
-    closer: 'Veamos más de cerca lo que sucede en segundo plano...',
-    'Trusted Bank': 'Trusted Bank',
-    Call: 'Llamar',
-    'Call Trusted Bank': 'Llamar Trusted Bank',
-    'In Call': 'En llamada',
-    'End Call': 'Finalizar llamada',
-  },
-};
+import {trs} from './translations';
+
+var translations = trs;
 var tt = translations.en;
+var glang = 'en';
 const eventEmitter = new NativeEventEmitter(NativeModules.EventEmitter);
 const {VonageVerifySilentAuthModule, ClientManager} = NativeModules;
 const pusher = Pusher.getInstance();
@@ -281,7 +219,6 @@ function MainScreen(): React.JSX.Element {
       </View>
     );
   };
-  const [translation, setTranslation] = useState(translations.en);
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
   const [inputNumber, setInputNumber] = useState(null);
@@ -309,9 +246,11 @@ function MainScreen(): React.JSX.Element {
   const [failure, setFailure] = useState(false);
   const [front, setFront] = useState(true);
   const [deeper, setDeeper] = useState(false);
-  const [lang, setLang] = useState('en');
+  const [lang, setLang] = useState(glang);
+  const [translation, setTranslation] = useState(translations[glang]);
 
   console.log('Render with state: ', state, 'failure: ', failure);
+
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 265;
 
@@ -368,7 +307,7 @@ function MainScreen(): React.JSX.Element {
       body: JSON.stringify({phone: '' + gPhone, product: 'vault'}),
     });
     var data = await resp.json();
-    console.log('Response from Initial Redirector: ', data);
+    console.log('Response from Initial Redirector: ', data.baseUrl);
     if (data.baseUrl) {
       ////////////////////////// Note: uncomment for RELEASE version!!!!
       if (!DEBUG) {
@@ -398,6 +337,20 @@ function MainScreen(): React.JSX.Element {
     }
     if (data.languages) {
       languages = data.languages;
+    }
+    if (data.translations) {
+      console.log(
+        'Got external translations!',
+        lang,
+        data.translations.es.Done,
+      );
+      translations = data.translations;
+      tt = data.translations[glang];
+      console.log('Example Done: ', glang, translations.es.Done);
+      setTranslation(translations[glang]);
+      setCbutton(
+        translations[glang]['Call Trusted Bank'] ?? 'Call Trusted Bank',
+      );
     }
   }
   function updateStatus(index, results, desc = '') {
@@ -824,10 +777,11 @@ function MainScreen(): React.JSX.Element {
       if (val) {
         console.log('Got lang: ', val, val in translations);
         setLang(val);
+        glang = val;
         if (val in translations) {
           console.log('Setting translation to ', val);
           setTranslation(translations[val]);
-          tt = translations[val];
+          tt = translations[glang];
           setCbutton(
             translations[val]['Call Trusted Bank'] ?? 'Call Trusted Bank',
           );
@@ -1582,6 +1536,7 @@ function MainScreen(): React.JSX.Element {
                       onChange={e => {
                         console.log('Setting lang: ', e.value);
                         setLang(e.value);
+                        glang = e.value;
                         AsyncStorage.setItem('lang', '' + lang);
                         if (e.value in translations) {
                           console.log('Setting translation to ', e.value);
