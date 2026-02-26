@@ -59,7 +59,7 @@ export var trs = {
     closer: 'Veamos más de cerca lo que sucede en segundo plano...',
     'Trusted Bank': 'Trusted Bank',
     Call: 'Llamar',
-    'Call Trusted Bank': 'Llamar Trusted Bank',
+    'Call Trusted Bank': 'Llamar a Trusted Bank',
     'In Call': 'En llamada',
     'End Call': 'Finalizar llamada',
   },

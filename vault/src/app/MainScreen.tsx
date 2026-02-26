@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.17';
+const ver = '2.19';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -56,6 +56,7 @@ import bedimage from '../images/bedrock.jpg';
 import {request, requestMultiple, PERMISSIONS} from 'react-native-permissions';
 import Sound from 'react-native-sound';
 import {SelectCountry} from 'react-native-element-dropdown';
+import merge from 'lodash.merge';
 
 var languages = [
   {
@@ -339,13 +340,10 @@ function MainScreen(): React.JSX.Element {
       languages = data.languages;
     }
     if (data.translations) {
-      console.log(
-        'Got external translations!',
-        lang,
-        data.translations.es.Done,
-      );
-      translations = data.translations;
-      tt = data.translations[glang];
+      console.log('Got external translations!', lang, data.translations);
+      var mergedConfig = merge(translations, data.translations);
+      translations = mergedConfig;
+      tt = translations[glang];
       console.log('Example Done: ', glang, translations.es.Done);
       setTranslation(translations[glang]);
       setCbutton(
