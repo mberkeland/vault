@@ -61,11 +61,11 @@ export var trs = {
     Call: 'Llamar',
     'Call Trusted Bank': 'Llamar a Trusted Bank',
     'In Call': 'En llamada',
-    'End Call': 'Finalizar llamada',
+    'End Call': 'Terminar llamada',
   },
   de: {
-    'AI\nAssistant': 'AI\nAssistent',
-    'Call the Vault AI Assistant': 'Rufen Sie den Vault-AI-Assistenten an',
+    'AI\nAssistant': 'KI\nAssistent',
+    'Call the Vault AI Assistant': 'Rufen Sie den Vault-KI-Assistenten an',
     'SIM\nSwap': 'SIM\nTausch',
     'Checking to see if number recently moved to another SIM':
       'Überprüfung, ob die Nummer kürzlich auf eine andere SIM-Karte übertragen wurde',
@@ -159,5 +159,70 @@ export var trs = {
     'Call Trusted Bank': 'Chiama Trusted Bank',
     'In Call': 'Nella chiamata',
     'End Call': 'Fine chiamata',
+  },
+  pt: {
+    'AI\nAssistant': 'Assistente\nde IA',
+    'Call the Vault AI Assistant': 'Ligue para o Assistente de IA do Vault',
+    'SIM\nSwap': 'Troca\nde SIM',
+    'Checking to see if number recently moved to another SIM':
+      'Verificando se o número foi movido recentemente para outro SIM',
+    'Silent\nAuthentication': 'Silent\nAuthentication',
+    'Silently verifying that this phone is the number expected':
+      'Verificando silenciosamente se este telefone é o número esperado',
+    'Device\nLocation': 'Localização\ndo dispositivo',
+    'Checking to see that the phone is in the location expected':
+      'Verificando se o telefone está no local esperado',
+    'Fraud\nDefender': 'Fraud\nDefender',
+    'Using Vonage Fraud APIs to check for likely fraudulent numbers':
+      'Usando as APIs de fraude da Vonage para verificar números provavelmente fraudulentos',
+    'Facial\nLiveness': 'Vivacidade\nFacial',
+    'Checking ‘Facial Liveness’ to prevent pictures or AI bots':
+      'Verificando a "Vivacidade Facial" para evitar fotos ou bots de IA',
+    Settings: 'Configurações',
+    'Call to speak to our agent': 'Ligue para falar com nosso agente',
+    Done: 'Concluído',
+    'Demo Mode': 'Modo de Demonstração',
+    'Fail Silent Auth': 'Falha na Silent Auth',
+    'Light the Light': 'Acenda a luz',
+    Use: 'Usar',
+    closer:
+      'Vamos analisar mais de perto o que está acontecendo em segundo plano...',
+    'Trusted Bank': 'Trusted Bank',
+    Call: 'Ligar',
+    'Call Trusted Bank': 'Ligar para o Trusted Bank',
+    'In Call': 'Em chamada',
+    'End Call': 'Encerrar chamada',
+  },
+  hi: {
+    'AI\nAssistant': 'AI\nसहायक',
+    'Call the Vault AI Assistant': 'वॉल्ट AI सहायक को कॉल करें',
+    'SIM\nSwap': 'SIM\nबदलना',
+    'Checking to see if number recently moved to another SIM':
+      'यह जाँच की जा रही है कि क्या नंबर हाल ही में किसी अन्य SIM पर स्थानांतरित हुआ है',
+    'Silent\nAuthentication': 'Silent\nAuthentication',
+    'Silently verifying that this phone is the number expected':
+      'चुपचाप सत्यापित किया जा रहा है कि यह फोन अपेक्षित नंबर है',
+    'Device\nLocation': 'डिवाइस की\nलोकेशन',
+    'Checking to see that the phone is in the location expected':
+      'यह जाँच की जा रही है कि फोन अपेक्षित लोकेशन पर है या नहीं',
+    'Fraud\nDefender': 'Fraud\nDefender',
+    'Using Vonage Fraud APIs to check for likely fraudulent numbers':
+      'संभावित धोखाधड़ी वाले नंबरों की जाँच के लिए Vonage Fraud API का उपयोग करना',
+    'Facial\nLiveness': 'फेशियल\nलाइवनेस',
+    'Checking ‘Facial Liveness’ to prevent pictures or AI bots':
+      'तस्वीरों या AI बॉट्स को रोकने के लिए "फेशियल लाइवनेस" की जाँच करना',
+    Settings: 'सेटिंग्स',
+    'Call to speak to our agent': 'हमारे एजेंट से बात करने के लिए कॉल करें',
+    Done: 'हो गया',
+    'Demo Mode': 'डेमो मोड',
+    'Fail Silent Auth': 'Silent Auth विफल',
+    'Light the Light': 'लाइट जलाएं',
+    Use: 'उपयोग करें',
+    closer: 'आइए करीब से देखें कि बैकग्राउंड में क्या हो रहा है...',
+    'Trusted Bank': 'Trusted Bank',
+    Call: 'कॉल करें',
+    'Call Trusted Bank': 'Trusted Bank को कॉल करें',
+    'In Call': 'कॉल पर',
+    'End Call': 'कॉल समाप्त करें',
   },
 };

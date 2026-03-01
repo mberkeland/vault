@@ -4,12 +4,13 @@
  *
  * @format
  */
-const ver = '2.19';
+const ver = '2.20';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
 //import {AudioDeviceInfo, AudioManager} from 'react-native-audio-api';
 import type {PropsWithChildren} from 'react';
+const {useRef} = require('react');
 import {
   SafeAreaView,
   ScrollView,
@@ -220,6 +221,7 @@ function MainScreen(): React.JSX.Element {
       </View>
     );
   };
+  const videoPlayerRef = useRef(null);
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
   const [inputNumber, setInputNumber] = useState(null);
@@ -249,6 +251,7 @@ function MainScreen(): React.JSX.Element {
   const [deeper, setDeeper] = useState(false);
   const [lang, setLang] = useState(glang);
   const [translation, setTranslation] = useState(translations[glang]);
+  const [paused, setPaused] = useState(true);
 
   console.log('Render with state: ', state, 'failure: ', failure);
 
@@ -423,7 +426,8 @@ function MainScreen(): React.JSX.Element {
     if (!isConnected) {
       await ClientManager.login(jwt);
     } else {
-      if (!LOCAL && !inCall) {
+      if (!inCall) {
+        console.log('ClientManager.makeCall(): ', gcallto);
         //ClientManager.setCommunicationDevices();
         const callId = ClientManager.makeCall(gcallto);
         console.log('CallId 2: ', callId);
@@ -892,6 +896,8 @@ function MainScreen(): React.JSX.Element {
       endVideo = tvideof;
     }
     setShowVideo(true);
+    console.log('About to restart video');
+    restartVideo();
     console.log('Show Video set to true');
     var obj = {};
     obj.name = 'Verification';
@@ -903,6 +909,14 @@ function MainScreen(): React.JSX.Element {
     obj.sessionId = sessionId;
     sendResults(obj);
   }, [done]);
+  const restartVideo = () => {
+    console.log('Restarting video: ', videoPlayerRef);
+    if (videoPlayerRef.current) {
+      videoPlayerRef.current.seek(0); // Seek to the beginning (0 seconds)
+      setPaused(false); // Start playing after seeking
+      console.log('Set pause to false');
+    }
+  };
 
   useEffect(() => {
     console.log('useEffect for state: ', state, tasks.length);
@@ -1182,6 +1196,9 @@ function MainScreen(): React.JSX.Element {
                   paused={false}
                   style={[styles.video, {top: -40}]}
                   repeat={false}
+                  muted={true}
+                  disableFocus={true}
+                  disableAudioSessionManagement={true}
                 />
                 <Text
                   style={[
@@ -1670,22 +1687,28 @@ function MainScreen(): React.JSX.Element {
               </Modal>
             </View>
           ) : null}
-          {startsplash || showVideo ? (
+          {startsplash || showVideo || 1 ? (
             <View
               style={[
                 styles.container,
                 {
                   backgroundColor: isDarkMode ? Colors.black : '',
+                  height: showVideo ? '100%' : 0,
                 },
               ]}>
               <Video
+                ref={videoPlayerRef}
                 source={endVideo}
-                paused={false}
-                style={styles.video}
+                paused={paused}
+                style={[styles.video, {height: showVideo ? 228 : 0}]}
                 repeat={false}
+                muted={true}
+                disableFocus={true}
+                disableAudioSessionManagement={true}
               />
             </View>
-          ) : (
+          ) : null}
+          {!showVideo && (
             <View
               onTouchStart={onTouchStart}
               onTouchEnd={onTouchEnd}
