@@ -17,8 +17,6 @@ import com.facebook.react.bridge.WritableMap
 import com.vonage.android_core.VGClientConfig
 import com.vonage.clientcore.core.api.ClientConfigRegion
 import com.vonage.voice.api.*
-//import com.vonage.clientcore.core.api.LoggingLevel
-//import com.vonage.clientcore.core.api.ConfigKt.setDefaultLoggingLevel
 
 class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModule(context) {
     private var client: VoiceClient = VoiceClient(context)
@@ -28,6 +26,7 @@ class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModu
     private var audioFocusRequest: AudioFocusRequest? = null
     private var hasAudioFocus = false
     private var currentDevice = 0
+    private var muted = false
     init {
         Log.d("ClientManager", "Initializing VoiceClient")
         client.setConfig(VGClientConfig(ClientConfigRegion.US))
@@ -104,16 +103,6 @@ class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModu
             }
             if (sessionId != null) {
                 this.sendEvent("onStatusChange", "status", "Connected");
-                /*
-                client.setOnLegStatusUpdate { callId, legId, status ->
-                  Log.d("ClientManager", "Leg status update: callId=$callId, legId=$legId, status=$status")
-                  this.sendEvent("onCallStateChange", "state", status.name)
-                }
-                client.setOnCallHangupListener { callId, callQuality, reason ->
-                    Log.d("ClientManager", "Call hangup: callId=$callId, reason=$reason")
-                    this.sendEvent("onCallStateChange", "state", "Idle")
-                }
-                */
             }
             null
         }
@@ -137,7 +126,6 @@ class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModu
         val devices: List<AudioDeviceInfo> = audioManager.availableCommunicationDevices
         Log.d("ClientManager", "Available communication devices: ${devices.size}")
         var found = false;
-        //lateinit var bestDevice:AudioDeviceInfo
         var bestDevice = 0;
         for (device in devices) {
             // Log device details
@@ -147,12 +135,10 @@ class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModu
             // This example looks for the first BUILTIN_SPEAKER
             if (!found && (device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)) {
                 // You can use setCommunicationDevice(device) to route audio to this device
- //               val result = audioManager.setCommunicationDevice(device)
                 Log.d("ClientManager", "Setting BUILTIN_SPEAKER ${device.id} type ${device.type}")
                 bestDevice=device.id
             }
             if((device.type == AudioDeviceInfo.TYPE_BLE_HEADSET) || (device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) || (device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO)) {
-//                val result = audioManager.setCommunicationDevice(device)
                 Log.d("ClientManager", "Setting Bluetooth ${device.id} type ${device.type}")
                 bestDevice=device.id
                 found=true;
@@ -185,6 +171,7 @@ class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModu
                 this.sendEvent("onCallStateChange", "state", "On Call")
                 callID = outboundCallID
                 Log.d("ClientManager", "makeCall callId ${callID}")
+                muted = false;
             }
             null
         }
@@ -202,4 +189,44 @@ class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModu
             }
         }
     }
+    /**
+     * Convenience toggle; pass `true` to mute, `false` to unmute.
+     */
+    @ReactMethod
+    fun setMuted(domute: Boolean) {
+        val localCallID =callID
+        if(localCallID === null) {
+            return
+        }
+        Log.d("ClientManager", "setMuted called with: ${domute}")
+
+        if (domute) { 
+            client.mute(localCallID){ err ->
+                if (err != null) {
+                    Log.d("ClientManager", "setMuted error calling mute: ${err}")
+                } else {
+                    muted = true
+                }
+            }
+        } else {
+            client.unmute(localCallID){ err ->
+                if (err != null) {
+                    Log.d("ClientManager", "setMuted error calling unmute: ${err}")
+                } else {
+                    muted = false
+                }
+            }
+        }
+        Log.d("ClientManager", "setMuted set to: ${muted}")
+    }
+
+    /**
+     * Return whether the call with the given ID is currently muted.
+     *
+     */
+    @ReactMethod
+    fun isCallMuted(): Boolean? {
+        return muted
+    }
+
 }

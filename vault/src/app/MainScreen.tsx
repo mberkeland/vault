@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.20';
+const ver = '2.21';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -252,6 +252,7 @@ function MainScreen(): React.JSX.Element {
   const [lang, setLang] = useState(glang);
   const [translation, setTranslation] = useState(translations[glang]);
   const [paused, setPaused] = useState(true);
+  const [muted, setMuted] = useState(false);
 
   console.log('Render with state: ', state, 'failure: ', failure);
 
@@ -430,6 +431,7 @@ function MainScreen(): React.JSX.Element {
         console.log('ClientManager.makeCall(): ', gcallto);
         //ClientManager.setCommunicationDevices();
         const callId = ClientManager.makeCall(gcallto);
+        setMuted(false);
         console.log('CallId 2: ', callId);
         //playVideo();
         updateStatus(0, 'allow', t('In Call'));
@@ -831,6 +833,7 @@ function MainScreen(): React.JSX.Element {
           if (!LOCAL && !inCall) {
             const callId = ClientManager.makeCall(gcallto);
             console.log('CallId: ', callId);
+            setMuted(false);
             //playVideo();
             updateStatus(0, 'allow', t('In Call'));
           }
@@ -1120,6 +1123,23 @@ function MainScreen(): React.JSX.Element {
     }
     console.log('About to set done to true');
     setDone(true);
+  };
+  const doMute = async () => {
+    var callMuted = ClientManager.isCallMuted();
+    console.log('Before isCallMuted', callMuted);
+    if (callMuted) {
+      ClientManager.setMuted(false);
+      setMuted(false);
+    } else {
+      ClientManager.setMuted(true);
+      setMuted(true);
+    }
+    callMuted = ClientManager.isCallMuted();
+    console.log('after isCallMuted', callMuted);
+    setTimeout(() => {
+      callMuted = ClientManager.isCallMuted();
+      console.log('after DELAYED isCallMuted', callMuted);
+    }, 500);
   };
   const reset = async (useFront = false) => {
     console.log('Reset!');
@@ -1781,6 +1801,24 @@ function MainScreen(): React.JSX.Element {
                 backgroundColor: isDarkMode ? Colors.black : '',
               },
             ]}>
+            {inCall ? (
+              <TouchableOpacity onPress={() => doMute()}>
+                <Image
+                  style={[
+                    styles.smallIcon,
+                    {
+                      height: 70,
+                      width: 70,
+                      marginRight: 50,
+                    },
+                  ]}
+                  source={
+                    muted
+                      ? require('../images/muted.png')
+                      : require('../images/unmuted.png')
+                  }></Image>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity onPress={() => reset(true)}>
               <Image
                 style={[styles.smallIcon, {width: 40}]}
