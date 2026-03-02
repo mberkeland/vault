@@ -852,6 +852,7 @@ function MainScreen(): React.JSX.Element {
           console.log('Setting inCall to false', txt);
           setInCall(false);
           setCbutton(txt);
+          setIsConnected(false); //MSB
         }
       });
     }

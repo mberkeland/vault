@@ -39,6 +39,15 @@ class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModu
             }
             //currentCommunicationDevice = device
         }
+        client.setOnLegStatusUpdate { callId, legId, status ->
+            Log.d("ClientManager", "Leg status update: callId=$callId, legId=$legId, status=$status")
+            this.sendEvent("onCallStateChange", "state", status.name)
+        }
+        client.setOnCallHangupListener { callId, callQuality, reason ->
+            Log.d("ClientManager", "Call hangup: callId=$callId, reason=$reason")
+            this.sendEvent("onCallStateChange", "state", "Idle")
+        }
+
         val executor = ContextCompat.getMainExecutor(context)
         audioManager.addOnCommunicationDeviceChangedListener(executor, listener)
    }
@@ -95,6 +104,7 @@ class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModu
             }
             if (sessionId != null) {
                 this.sendEvent("onStatusChange", "status", "Connected");
+                /*
                 client.setOnLegStatusUpdate { callId, legId, status ->
                   Log.d("ClientManager", "Leg status update: callId=$callId, legId=$legId, status=$status")
                   this.sendEvent("onCallStateChange", "state", status.name)
@@ -103,6 +113,7 @@ class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModu
                     Log.d("ClientManager", "Call hangup: callId=$callId, reason=$reason")
                     this.sendEvent("onCallStateChange", "state", "Idle")
                 }
+                */
             }
             null
         }
