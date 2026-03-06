@@ -16,10 +16,10 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.WritableMap
 import com.vonage.android_core.VGClientConfig
 import com.vonage.clientcore.core.api.ClientConfigRegion
-import com.vonage.voice.api.VoiceClient
+import com.vonage.voice.api.*
 
-class ClientManager(private val context: ReactApplicationContext) : ReactContextBaseJavaModule(context) {
-    private lateinit var client : VoiceClient
+class ClientManager(context: ReactApplicationContext) : ReactContextBaseJavaModule(context) {
+    private var client: VoiceClient = VoiceClient(context)
     private var callID: String? = null
     private var eventEmitter: EventEmitter = EventEmitter(context)
     private var audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -29,8 +29,7 @@ class ClientManager(private val context: ReactApplicationContext) : ReactContext
     private var muted = false
     init {
         Log.d("ClientManager", "Initializing VoiceClient")
-        initClient()
-        setClientListeners()
+        client.setConfig(VGClientConfig(ClientConfigRegion.US))
         val listener = AudioManager.OnCommunicationDeviceChangedListener { device -> // Handle changes
             Log.d("ClientManager", "Audio device changed {$device}")
             if(currentDevice>0 && (currentDevice != device?.id)) {
@@ -39,15 +38,6 @@ class ClientManager(private val context: ReactApplicationContext) : ReactContext
             }
             //currentCommunicationDevice = device
         }
-        val executor = ContextCompat.getMainExecutor(context)
-        audioManager.addOnCommunicationDeviceChangedListener(executor, listener)
-   }
-    private fun initClient(){
-        val config = VGClientConfig(ClientConfigRegion.US)
-        client = VoiceClient(context)
-        client.setConfig(config)
-    }
-   private fun setClientListeners(){
         client.setOnLegStatusUpdate { callId, legId, status ->
             Log.d("ClientManager", "Leg status update: callId=$callId, legId=$legId, status=$status")
             this.sendEvent("onCallStateChange", "state", status.name)
@@ -56,23 +46,11 @@ class ClientManager(private val context: ReactApplicationContext) : ReactContext
             Log.d("ClientManager", "Call hangup: callId=$callId, reason=$reason")
             this.sendEvent("onCallStateChange", "state", "Idle")
         }
-        client.setSessionErrorListener { err ->
-            Log.d("ClientManager","❌ Session error: $err")
-        }
+
+        val executor = ContextCompat.getMainExecutor(context)
+        audioManager.addOnCommunicationDeviceChangedListener(executor, listener)
    }
-   fun enableNoiseSuppression(){
-        val localCallID =callID
-        if(localCallID === null) {
-            return
-        }
-        client.enableNoiseSuppression(localCallID) { err ->
-            err?.let {
-                Log.d("ClientManager","Error enabling noise suppression on Call: $it")
-            } ?: run {
-                Log.d("ClientManager","Enabled noise suppression on Call with id: $localCallID")
-            }
-        }
-    }
+
     override fun getName(): String {
         return "ClientManager"
     }
@@ -119,7 +97,7 @@ class ClientManager(private val context: ReactApplicationContext) : ReactContext
     fun login(jwt: String) {
         Log.d("ClientManager", "login: $jwt")
 
-        client.createSession(jwt) { error, sessionId ->
+        client.createSession(jwt, null) { error, sessionId ->
             if (error != null) {
                 this.sendEvent("onStatusChange", "status", "Error")
             }
@@ -194,7 +172,6 @@ class ClientManager(private val context: ReactApplicationContext) : ReactContext
                 callID = outboundCallID
                 Log.d("ClientManager", "makeCall callId ${callID}")
                 muted = false;
-                this.enableNoiseSuppression();
             }
             null
         }
