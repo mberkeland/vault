@@ -8,6 +8,14 @@ PODS:
   - hermes-engine (0.76.5):
     - hermes-engine/Pre-built (= 0.76.5)
   - hermes-engine/Pre-built (0.76.5)
+  - NWWebSocket (0.5.10)
+  - pusher-websocket-react-native (1.3.2):
+    - PusherSwift (~> 10.1.9)
+    - React
+  - PusherSwift (10.1.9):
+    - NWWebSocket (~> 0.5.9)
+    - PusherTweetNacl (~> 1.2.0)
+  - PusherTweetNacl (1.2.0)
   - RCT-Folly (2024.01.01.00):
     - boost
     - DoubleConversion
@@ -1690,6 +1698,27 @@ PODS:
     - Yoga
   - RNDeviceInfo (14.0.4):
     - React-Core
+  - RNPermissions (5.5.1):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNReanimated (3.16.7):
     - DoubleConversion
     - glog
@@ -1822,6 +1851,27 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNSound (0.13.0):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNSVG (15.11.1):
     - DoubleConversion
     - glog
@@ -1867,6 +1917,9 @@ PODS:
     - Yoga
   - SocketRocket (0.7.1)
   - VonageClientSDKNumberVerification (1.1.1)
+  - VonageClientSDKVoice (2.3.0):
+    - VonageWebRTC (~> 121.1.100)
+  - VonageWebRTC (121.1.101)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -1876,6 +1929,7 @@ DEPENDENCIES:
   - fmt (from `../node_modules/react-native/third-party-podspecs/fmt.podspec`)
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
+  - "pusher-websocket-react-native (from `../node_modules/@pusher/pusher-websocket-react-native`)"
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCT-Folly/Fabric (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -1941,17 +1995,25 @@ DEPENDENCIES:
   - ReactNativeGetLocation (from `../node_modules/react-native-get-location`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - RNDeviceInfo (from `../node_modules/react-native-device-info`)
+  - RNPermissions (from `../node_modules/react-native-permissions`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
+  - RNSound (from `../node_modules/react-native-sound`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - VonageClientSDKNumberVerification (= 1.1.1)
+  - VonageClientSDKVoice (= 2.3.0)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
   trunk:
     - CocoaAsyncSocket
+    - NWWebSocket
+    - PusherSwift
+    - PusherTweetNacl
     - SocketRocket
     - VonageClientSDKNumberVerification
+    - VonageClientSDKVoice
+    - VonageWebRTC
 
 EXTERNAL SOURCES:
   boost:
@@ -1967,6 +2029,8 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-2024-11-12-RNv0.76.2-5b4aa20c719830dcf5684832b89a6edb95ac3d64
+  pusher-websocket-react-native:
+    :path: "../node_modules/@pusher/pusher-websocket-react-native"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -2093,10 +2157,14 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNDeviceInfo:
     :path: "../node_modules/react-native-device-info"
+  RNPermissions:
+    :path: "../node_modules/react-native-permissions"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
     :path: "../node_modules/react-native-screens"
+  RNSound:
+    :path: "../node_modules/react-native-sound"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   Yoga:
@@ -2110,6 +2178,10 @@ SPEC CHECKSUMS:
   fmt: 10c6e61f4be25dc963c36bd73fc7b1705fe975be
   glog: 08b301085f15bcbb6ff8632a8ebaf239aae04e6a
   hermes-engine: 06a9c6900587420b90accc394199527c64259db4
+  NWWebSocket: 873eb4b18acd0317da70cdba388d792a3187ce00
+  pusher-websocket-react-native: c739fe693fc25db050d50ef1898fda465d4cd8e3
+  PusherSwift: 84a45a6b62c137c52ca948626817989d3127c022
+  PusherTweetNacl: 015f56f2cf010e718703f2bd9bca66fdcc91b208
   RCT-Folly: bf5c0376ffe4dd2cf438dcf86db385df9fdce648
   RCTDeprecation: fb7d408617e25d7f537940000d766d60149c5fea
   RCTRequired: 9aaf0ffcc1f41f0c671af863970ef25c422a9920
@@ -2173,13 +2245,17 @@ SPEC CHECKSUMS:
   ReactNativeGetLocation: 7e019e0a10ccc3fe082cd9b02b28899512c1b2a5
   RNCAsyncStorage: 0ad93525a3a72652e88e14ad109c6dac856cb693
   RNDeviceInfo: feea80a690d2bde1fe51461cf548039258bd03f2
+  RNPermissions: 0e5f6b35abf88f76c7a882c1ce1dfb389dda82c0
   RNReanimated: 9ee6347ca0aa3cf78cae715455e781728ae142e2
   RNScreens: e7fb913da559b9b2fe6c2f49828bedb061914abd
+  RNSound: ffd57494f3a3ad9ea4c580dde8aa3be9e7c4887e
   RNSVG: ea3e35f0375ac20449384fa89ce056ee0e0690ee
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   VonageClientSDKNumberVerification: 34b61720839fffffb0975164ba4a3efb39d6d47f
+  VonageClientSDKVoice: 031078ac6b4bda51ee19649ab5d1d7e36383b992
+  VonageWebRTC: f3734a3a48a8ec05d3e88f55e0af139d01750415
   Yoga: c7ea4c36c1d78ebbf45529b6e78283e4e0fe4956
 
-PODFILE CHECKSUM: 6670a5d8464c84d6a530438f29a3fbced2abcf0c
+PODFILE CHECKSUM: b67395606994903c0dd63c12ff56d6de38d0f7be
 
 COCOAPODS: 1.15.2

@@ -229,6 +229,7 @@ function MainScreen(): React.JSX.Element {
   const [inProcess, setInProcess] = useState(false);
   const [facial, setFacial] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [pendingSettings, setPendingSettings] = useState(false);
   const [fast, setFast] = useState(true);
   const [demo, setDemo] = useState(false);
   const [sandbox, setSandbox] = useState(false);
@@ -822,43 +823,43 @@ function MainScreen(): React.JSX.Element {
         PERMISSIONS.ANDROID.RECORD_AUDIO,
         PERMISSIONS.ANDROID.READ_PHONE_STATE,
       ]);
-      eventEmitter.addListener('onStatusChange', async data => {
-        console.log('Got status change event: ', data);
-        const status = data.status;
-        console.log('Got status change: ', status);
-        //this.setState({status: status});
-
-        if (status === 'connected' || status === 'Connected') {
-          setIsConnected(true);
-          if (!LOCAL && !inCall) {
-            const callId = ClientManager.makeCall(gcallto);
-            console.log('CallId: ', callId);
-            setMuted(false);
-            //playVideo();
-            updateStatus(0, 'allow', t('In Call'));
-          }
-
-          //this.setState({button: 'Call'});
-          //this.setState({callAction: () => ClientManager.makeCall(number)});
-        }
-      });
-      eventEmitter.addListener('onCallStateChange', data => {
-        const state = data.state;
-        console.log('Got state change: ', state);
-        if (state == 'On Call') {
-          var txt = t('End Call');
-          console.log('Setting inCall to true, ', txt);
-          setInCall(true);
-          setCbutton(txt);
-        } else if (state == 'Idle') {
-          var txt = t('Call Trusted Bank');
-          console.log('Setting inCall to false', txt);
-          setInCall(false);
-          setCbutton(txt);
-          setIsConnected(false); //MSB
-        }
-      });
     }
+    eventEmitter.addListener('onStatusChange', async data => {
+      console.log('Got status change event: ', data);
+      const status = data.status;
+      console.log('Got status change: ', status);
+      //this.setState({status: status});
+
+      if (status === 'connected' || status === 'Connected') {
+        setIsConnected(true);
+        if (!LOCAL && !inCall) {
+          const callId = ClientManager.makeCall(gcallto);
+          console.log('CallId: ', callId);
+          setMuted(false);
+          //playVideo();
+          updateStatus(0, 'allow', t('In Call'));
+        }
+
+        //this.setState({button: 'Call'});
+        //this.setState({callAction: () => ClientManager.makeCall(number)});
+      }
+    });
+    eventEmitter.addListener('onCallStateChange', data => {
+      const state = data.state;
+      console.log('Got state change: ', state);
+      if (state == 'On Call') {
+        var txt = t('End Call');
+        console.log('Setting inCall to true, ', txt);
+        setInCall(true);
+        setCbutton(txt);
+      } else if (state == 'Idle') {
+        var txt = t('Call Trusted Bank');
+        console.log('Setting inCall to false', txt);
+        setInCall(false);
+        setCbutton(txt);
+        setIsConnected(false); //MSB
+      }
+    });
     setCbutton(t('Call Trusted Bank'));
   }, []);
   useEffect(() => {
@@ -952,6 +953,9 @@ function MainScreen(): React.JSX.Element {
   }, [state]);
   const saveSettings = () => {
     setSettings(false);
+    setTimeout(() => {
+      setFront(true)
+    }, 300)
     console.log('Writing settings to storage: ');
     AsyncStorage.setItem('fast', '' + fast);
     AsyncStorage.setItem('demo', '' + demo);
@@ -1125,7 +1129,7 @@ function MainScreen(): React.JSX.Element {
     setDone(true);
   };
   const doMute = async () => {
-    var callMuted = ClientManager.isCallMuted();
+    var callMuted = await ClientManager.isCallMuted();
     console.log('Before isCallMuted', callMuted);
     if (callMuted) {
       ClientManager.setMuted(false);
@@ -1134,10 +1138,10 @@ function MainScreen(): React.JSX.Element {
       ClientManager.setMuted(true);
       setMuted(true);
     }
-    callMuted = ClientManager.isCallMuted();
+    callMuted = await ClientManager.isCallMuted();
     console.log('after isCallMuted', callMuted);
-    setTimeout(() => {
-      callMuted = ClientManager.isCallMuted();
+    setTimeout(async () => {
+      callMuted = await ClientManager.isCallMuted();
       console.log('after DELAYED isCallMuted', callMuted);
     }, 500);
   };
@@ -1158,8 +1162,11 @@ function MainScreen(): React.JSX.Element {
     setWarning(false);
     preFacial = false;
     alterState(null);
+    setSettings(false);
     if (useFront) {
-      setFront(true);
+      setTimeout(() => {
+        setFront(true);
+      }, 300)
     }
     //setFront(true);
 
@@ -1285,7 +1292,14 @@ function MainScreen(): React.JSX.Element {
                 animationIn={'fadeIn'}
                 animationOutTiming={1000}
                 animationInTiming={1000}
-                isVisible={front}>
+                isVisible={front && !settings}
+                onModalHide={() => {
+                  if (pendingSettings) {
+                    setSettings(true);
+                    setPendingSettings(false);
+                  }
+                }}
+                >
                 <ImageBackground
                   source={require('../images/TBackground.png')}
                   style={styles.front}>
@@ -1304,7 +1318,7 @@ function MainScreen(): React.JSX.Element {
                     source={require('../images/TBLogo-B.png')}
                     style={[
                       styles.logo2,
-                      {width: 200, height: 180, marginTop: 60, opacity: 1.0},
+                      {width: 200, height: 180, marginTop: 60, opacity: 1.0, overflow: 'hidden'},
                     ]}></Image>
                   <Text
                     style={[
@@ -1324,7 +1338,7 @@ function MainScreen(): React.JSX.Element {
                       <Image
                         source={require('../images/phone.png')}
                         style={[
-                          styles.logo2,
+                          styles.smallIcon,
                           {
                             width: 80,
                             height: 80,
@@ -1336,7 +1350,9 @@ function MainScreen(): React.JSX.Element {
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
-                        setFront(false);
+                        setTimeout(() => {
+                          setFront(false);
+                        }, 300)
                       }}>
                       <Image
                         source={require('../images/hangup.png')}
@@ -1354,7 +1370,10 @@ function MainScreen(): React.JSX.Element {
                   <TouchableOpacity
                     style={styles.absoluteSettings}
                     onPress={() => {
-                      setSettings(true);
+                      setTimeout(() => {
+                          setFront(false)
+                          setPendingSettings(true);
+                      }, 300)
                     }}>
                     <Image
                       style={styles.smallIcon} //{[styles.smallIcon, {marginTop: 70, marginLeft: 300}]}
@@ -1515,7 +1534,7 @@ function MainScreen(): React.JSX.Element {
               </Modal>
             </View>
           ) : null}
-          {settings ? (
+          {settings && !front ? (
             <View>
               <Modal
                 style={[styles.settings]}
@@ -1826,7 +1845,9 @@ function MainScreen(): React.JSX.Element {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
-                setSettings(true);
+                setTimeout(() => {
+                  setSettings(true);
+                }, 300)
               }}>
               <Image
                 style={[styles.smallIcon]}
