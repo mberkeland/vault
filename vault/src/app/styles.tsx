@@ -227,6 +227,11 @@ export const styles = StyleSheet.create({
     // Add any specific text styling here (color, font size, etc.)
     color: 'white',
   },
+  absoluteMessage: {
+    position: 'absolute',
+    left: 16,
+    top: '30%',
+  },
   tb_back: {
     backgroundColor: '#42084e',
   },

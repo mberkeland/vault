@@ -29,6 +29,7 @@ import {
   NativeModules,
   Dimensions,
   NativeEventEmitter,
+  Platform,
 } from 'react-native';
 import {
   Pusher,
@@ -1256,7 +1257,7 @@ function MainScreen(): React.JSX.Element {
               </Modal>
             </View>
           ) : null}
-          {1 && (
+          {Platform.OS === 'android' && (
             <View style={{flex: 1}}>
               <Modal
                 isVisible={deeper}
@@ -1330,6 +1331,22 @@ function MainScreen(): React.JSX.Element {
                     ]}>
                     {t('Call to speak to our agent')}
                   </Text>
+                  { Platform.OS === 'ios' && deeper && 
+                    <View style={[styles.rbutton, styles.absoluteMessage]}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setDeeper(false);
+                        }}>
+                        <Text
+                          style={[
+                            styles.buttonText,
+                            {fontSize: 25, textAlign: 'center'},
+                          ]}>
+                          {t('closer')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  }
                   <View style={{flexDirection: 'row', marginTop: 20}}>
                     <TouchableOpacity
                       onPress={() => {
