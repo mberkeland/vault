@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.22';
+const ver = '2.23';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -112,6 +112,7 @@ var udpUrl = '10.47.111.20';
 var udpPort = 50000;
 var bcolor = '#42084e'; //'#ECFFDC';
 var endVideo = tvideo;
+var endFailVideo = tvideof
 const filex = require('../images/redx2.gif');
 const fileq = require('../images/qmark.png');
 const filec = require('../images/greencheck1.gif');
@@ -223,6 +224,7 @@ function MainScreen(): React.JSX.Element {
     );
   };
   const videoPlayerRef = useRef(null);
+  const failVideoPlayerRef = useRef(null);
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
   const [inputNumber, setInputNumber] = useState(null);
@@ -255,6 +257,7 @@ function MainScreen(): React.JSX.Element {
   const [translation, setTranslation] = useState(translations[glang]);
   const [paused, setPaused] = useState(true);
   const [muted, setMuted] = useState(false);
+  const [isGood, setIsGood] = useState(true)
 
   console.log('Render with state: ', state, 'failure: ', failure);
 
@@ -896,11 +899,10 @@ function MainScreen(): React.JSX.Element {
         good = false;
       }
     });
-    if (good) {
-      endVideo = tvideo;
-    } else {
-      endVideo = tvideof;
-    }
+
+    setPaused(true);
+    setIsGood(good)
+
     setShowVideo(true);
     console.log('About to restart video');
     restartVideo();
@@ -919,9 +921,13 @@ function MainScreen(): React.JSX.Element {
     console.log('Restarting video: ', videoPlayerRef);
     if (videoPlayerRef.current) {
       videoPlayerRef.current.seek(0); // Seek to the beginning (0 seconds)
-      setPaused(false); // Start playing after seeking
-      console.log('Set pause to false');
     }
+    if (failVideoPlayerRef.current) {
+      failVideoPlayerRef.current.seek(0); // Seek to the beginning (0 seconds)
+    }
+
+    setPaused(false); // Start playing after seeking
+    console.log('Set pause to false');
   };
 
   useEffect(() => {
@@ -1757,7 +1763,17 @@ function MainScreen(): React.JSX.Element {
                 ref={videoPlayerRef}
                 source={endVideo}
                 paused={paused}
-                style={[styles.video, {height: showVideo ? 228 : 0}]}
+                style={[styles.video, {height: showVideo && isGood ? 228 : 0}]}
+                repeat={false}
+                muted={true}
+                disableFocus={true}
+                disableAudioSessionManagement={true}
+              />
+               <Video
+                ref={failVideoPlayerRef}
+                source={endFailVideo}
+                paused={paused}
+                style={[styles.video, {height: showVideo && !isGood? 228 : 0}]}
                 repeat={false}
                 muted={true}
                 disableFocus={true}
