@@ -1877,7 +1877,8 @@ function MainScreen(): React.JSX.Element {
             ]}>
             {inCall ? (
               <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center'}}>
-              <TouchableOpacity onPress={() => switchAudioOutput()}>
+               {Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => switchAudioOutput()}>
                 <Image
                   style={[
                     styles.smallIcon,
@@ -1893,6 +1894,7 @@ function MainScreen(): React.JSX.Element {
                       : require('../images/mobilephone.png')
                   }></Image>
               </TouchableOpacity>
+               )}
               <TouchableOpacity onPress={() => doMute()}>
                 <Image
                   style={[
