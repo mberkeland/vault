@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.23';
+const ver = '2.24';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -257,7 +257,8 @@ function MainScreen(): React.JSX.Element {
   const [translation, setTranslation] = useState(translations[glang]);
   const [paused, setPaused] = useState(true);
   const [muted, setMuted] = useState(false);
-  const [isGood, setIsGood] = useState(true)
+  const [isGood, setIsGood] = useState(true);
+  const [isSpeaker, setIsSpeaker] = useState(false);
 
   console.log('Render with state: ', state, 'failure: ', failure);
 
@@ -437,6 +438,7 @@ function MainScreen(): React.JSX.Element {
         //ClientManager.setCommunicationDevices();
         const callId = ClientManager.makeCall(gcallto);
         setMuted(false);
+        setIsSpeaker(false);
         console.log('CallId 2: ', callId);
         //playVideo();
         updateStatus(0, 'allow', t('In Call'));
@@ -840,6 +842,7 @@ function MainScreen(): React.JSX.Element {
           const callId = ClientManager.makeCall(gcallto);
           console.log('CallId: ', callId);
           setMuted(false);
+          setIsSpeaker(false);
           //playVideo();
           updateStatus(0, 'allow', t('In Call'));
         }
@@ -1152,6 +1155,25 @@ function MainScreen(): React.JSX.Element {
       console.log('after DELAYED isCallMuted', callMuted);
     }, 500);
   };
+
+  const switchAudioOutput = async () => {
+    var speakerOutput = await ClientManager.isSpeaker();
+    console.log('Before speakerOutput', speakerOutput);
+    if (speakerOutput) {
+      ClientManager.setSpeaker(false);
+      setIsSpeaker(false);
+    } else {
+      ClientManager.setSpeaker(true);
+      setIsSpeaker(true);
+    }
+    speakerOutput = await ClientManager.isSpeaker();
+    console.log('after audio route', speakerOutput);
+    setTimeout(async () => {
+      speakerOutput = await ClientManager.speakerOutput();
+      console.log('after DELAYED speakerOutput', speakerOutput);
+    }, 500);
+  };
+
   const reset = async (useFront = false) => {
     console.log('Reset!');
     const newTasks = tasks.map((c, i) => {
@@ -1854,6 +1876,23 @@ function MainScreen(): React.JSX.Element {
               },
             ]}>
             {inCall ? (
+              <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center'}}>
+              <TouchableOpacity onPress={() => switchAudioOutput()}>
+                <Image
+                  style={[
+                    styles.smallIcon,
+                    {
+                      height: 50,
+                      width: 50,
+                      marginRight: 60,
+                    },
+                  ]}
+                  source={
+                    isSpeaker
+                      ? require('../images/speaker.png')
+                      : require('../images/mobilephone.png')
+                  }></Image>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => doMute()}>
                 <Image
                   style={[
@@ -1870,6 +1909,7 @@ function MainScreen(): React.JSX.Element {
                       : require('../images/unmuted.png')
                   }></Image>
               </TouchableOpacity>
+              </View>
             ) : null}
             <TouchableOpacity onPress={() => reset(true)}>
               <Image
