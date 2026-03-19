@@ -118,7 +118,7 @@ dependencies {
     implementation 'com.facebook.fresco:animated-gif:3.5.0'
     implementation 'com.facebook.fresco:animated-webp:3.5.0'
     implementation 'com.facebook.fresco:webpsupport:3.5.0'
-    implementation 'com.vonage:client-sdk-number-verification:1.1.1'
+    implementation 'com.vonage:client-library:1.0.1'
     // implementation 'com.vonage:client-sdk:1.4.0'
     implementation("com.vonage:client-sdk-voice:2.3.0")
 

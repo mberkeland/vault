@@ -23,7 +23,7 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-pod 'VonageClientSDKNumberVerification', '1.1.1'
+pod 'VonageClientLibrary', '1.0.5'
 pod 'VonageClientSDKVoice', '2.3.0'
 
 target 'VonageVault' do
