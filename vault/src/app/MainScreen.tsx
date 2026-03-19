@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.25';
+const ver = '2.26';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -225,6 +225,7 @@ function MainScreen(): React.JSX.Element {
   };
   const videoPlayerRef = useRef(null);
   const failVideoPlayerRef = useRef(null);
+  const demoRef = useRef(false);
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
   const [inputNumber, setInputNumber] = useState(null);
@@ -234,7 +235,6 @@ function MainScreen(): React.JSX.Element {
   const [settings, setSettings] = useState(false);
   const [pendingSettings, setPendingSettings] = useState(false);
   const [fast, setFast] = useState(true);
-  const [demo, setDemo] = useState(false);
   const [sandbox, setSandbox] = useState(false);
   const [popup, setPopup] = useState(false);
   const [state, alterState] = useState(null);
@@ -451,7 +451,7 @@ function MainScreen(): React.JSX.Element {
       product: 'vault',
       id: deviceId,
       sandbox: sandbox,
-      demo: demo,
+      demo: demoRef.current,
     };
     if (index == null || !tasks[index].active) {
       console.log('Not using ', index);
@@ -459,7 +459,7 @@ function MainScreen(): React.JSX.Element {
       return;
     }
     var data;
-    console.log('in getStep for index ', index, demo);
+    console.log('in getStep for index ', index, demoRef.current);
     updateStatus(index, 'checking');
 
     if (index == 0 || tasks[index].tag == 'location') {
@@ -476,7 +476,7 @@ function MainScreen(): React.JSX.Element {
         body.lang = lang;
       }
     }
-    if (!demo || tasks[index].tag == 'ai') {
+    if (!demoRef.current || tasks[index].tag == 'ai') {
       if (sandbox && tasks[index].tag == 'nv') {
         body.phone = '990' + gPhone.substring(gPhone.length - 10);
       }
@@ -768,7 +768,7 @@ function MainScreen(): React.JSX.Element {
       }
       val = await AsyncStorage.getItem('demo');
       if (val == 'true') {
-        setDemo(true);
+        demoRef.current = true;
       }
       val = await AsyncStorage.getItem('sandbox');
       if (val === 'true') {
@@ -968,7 +968,7 @@ function MainScreen(): React.JSX.Element {
     }, 300)
     console.log('Writing settings to storage: ');
     AsyncStorage.setItem('fast', '' + fast);
-    AsyncStorage.setItem('demo', '' + demo);
+    AsyncStorage.setItem('demo', '' + demoRef.current);
     AsyncStorage.setItem('sandbox', '' + sandbox);
     AsyncStorage.setItem('light', '' + light);
     AsyncStorage.setItem('failure', '' + failure);
@@ -1087,6 +1087,7 @@ function MainScreen(): React.JSX.Element {
     reset();
     setInProcess(true);
     console.log('After Dialog');
+
     if (tasks[0].active) {
       // Special case for call first
       await getStep(0);
@@ -1676,7 +1677,7 @@ function MainScreen(): React.JSX.Element {
                   key={-2}
                   size={30}
                   text={t('Demo Mode')}
-                  isChecked={demo}
+                  isChecked={demoRef.current}
                   innerIconStyle={{borderWidth: 4}}
                   textStyle={{
                     textDecorationLine: 'none',
@@ -1688,7 +1689,7 @@ function MainScreen(): React.JSX.Element {
                     marginLeft: -10,
                   }}
                   onPress={(isChecked: boolean) => {
-                    setDemo(isChecked);
+                    demoRef.current = isChecked;
                     if (isChecked) {
                       setSandbox(false);
                     }
