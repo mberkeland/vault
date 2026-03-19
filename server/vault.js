@@ -1023,6 +1023,18 @@ app.all("/nverify", async (req, res) => {
   }
   return res.status(200).json({ results: okay }).end();
 });
+app.post("/cognitoStart", async (req, res) => {
+  var date = new Date().toLocaleString();
+  console.log(`cognitoStart request at ${date} : `, req.body);
+  var date = new Date().toLocaleString();
+  return res.status(200).json({ results: okay }).end();
+})
+app.post("/cognitoResults", async (req, res) => {
+  var date = new Date().toLocaleString();
+  console.log(`cognitoResults request at ${date} : `, req.body);
+  var date = new Date().toLocaleString();
+  return res.status(200).json({ results: okay }).end();
+})
 
 startup();
 app.listen(port, () => {
