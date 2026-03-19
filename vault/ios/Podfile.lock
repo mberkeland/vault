@@ -12,8 +12,8 @@ PODS:
   - pusher-websocket-react-native (1.3.2):
     - PusherSwift (~> 10.1.9)
     - React
-  - PusherSwift (10.1.9):
-    - NWWebSocket (~> 0.5.9)
+  - PusherSwift (10.1.10):
+    - NWWebSocket (~> 0.5.10)
     - PusherTweetNacl (~> 1.2.0)
   - PusherTweetNacl (1.2.0)
   - RCT-Folly (2024.01.01.00):
@@ -1916,7 +1916,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - SocketRocket (0.7.1)
-  - VonageClientSDKNumberVerification (1.1.1)
+  - VonageClientLibrary (1.0.5)
   - VonageClientSDKVoice (2.3.0):
     - VonageWebRTC (~> 121.1.100)
   - VonageWebRTC (121.1.101)
@@ -2000,7 +2000,7 @@ DEPENDENCIES:
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSound (from `../node_modules/react-native-sound`)
   - RNSVG (from `../node_modules/react-native-svg`)
-  - VonageClientSDKNumberVerification (= 1.1.1)
+  - VonageClientLibrary (= 1.0.5)
   - VonageClientSDKVoice (= 2.3.0)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
@@ -2011,7 +2011,7 @@ SPEC REPOS:
     - PusherSwift
     - PusherTweetNacl
     - SocketRocket
-    - VonageClientSDKNumberVerification
+    - VonageClientLibrary
     - VonageClientSDKVoice
     - VonageWebRTC
 
@@ -2180,7 +2180,7 @@ SPEC CHECKSUMS:
   hermes-engine: 06a9c6900587420b90accc394199527c64259db4
   NWWebSocket: 873eb4b18acd0317da70cdba388d792a3187ce00
   pusher-websocket-react-native: c739fe693fc25db050d50ef1898fda465d4cd8e3
-  PusherSwift: 84a45a6b62c137c52ca948626817989d3127c022
+  PusherSwift: 6022fe6584b4317dc5c177091292b2a4d80a8c35
   PusherTweetNacl: 015f56f2cf010e718703f2bd9bca66fdcc91b208
   RCT-Folly: bf5c0376ffe4dd2cf438dcf86db385df9fdce648
   RCTDeprecation: fb7d408617e25d7f537940000d766d60149c5fea
@@ -2251,11 +2251,11 @@ SPEC CHECKSUMS:
   RNSound: ffd57494f3a3ad9ea4c580dde8aa3be9e7c4887e
   RNSVG: ea3e35f0375ac20449384fa89ce056ee0e0690ee
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  VonageClientSDKNumberVerification: 34b61720839fffffb0975164ba4a3efb39d6d47f
+  VonageClientLibrary: 37fce918bf709b875b3ce943515d1856ea192856
   VonageClientSDKVoice: 031078ac6b4bda51ee19649ab5d1d7e36383b992
   VonageWebRTC: f3734a3a48a8ec05d3e88f55e0af139d01750415
   Yoga: c7ea4c36c1d78ebbf45529b6e78283e4e0fe4956
 
-PODFILE CHECKSUM: b67395606994903c0dd63c12ff56d6de38d0f7be
+PODFILE CHECKSUM: d45142c69ec5a6abe0a83c962dc6e756cbf74875
 
 COCOAPODS: 1.15.2

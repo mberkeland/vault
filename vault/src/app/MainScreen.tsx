@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.22';
+const ver = '2.25';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -112,6 +112,7 @@ var udpUrl = '10.47.111.20';
 var udpPort = 50000;
 var bcolor = '#42084e'; //'#ECFFDC';
 var endVideo = tvideo;
+var endFailVideo = tvideof
 const filex = require('../images/redx2.gif');
 const fileq = require('../images/qmark.png');
 const filec = require('../images/greencheck1.gif');
@@ -223,6 +224,7 @@ function MainScreen(): React.JSX.Element {
     );
   };
   const videoPlayerRef = useRef(null);
+  const failVideoPlayerRef = useRef(null);
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
   const [inputNumber, setInputNumber] = useState(null);
@@ -255,6 +257,8 @@ function MainScreen(): React.JSX.Element {
   const [translation, setTranslation] = useState(translations[glang]);
   const [paused, setPaused] = useState(true);
   const [muted, setMuted] = useState(false);
+  const [isGood, setIsGood] = useState(true);
+  const [isSpeaker, setIsSpeaker] = useState(false);
 
   console.log('Render with state: ', state, 'failure: ', failure);
 
@@ -434,6 +438,7 @@ function MainScreen(): React.JSX.Element {
         //ClientManager.setCommunicationDevices();
         const callId = ClientManager.makeCall(gcallto);
         setMuted(false);
+        setIsSpeaker(false);
         console.log('CallId 2: ', callId);
         //playVideo();
         updateStatus(0, 'allow', t('In Call'));
@@ -837,6 +842,7 @@ function MainScreen(): React.JSX.Element {
           const callId = ClientManager.makeCall(gcallto);
           console.log('CallId: ', callId);
           setMuted(false);
+          setIsSpeaker(false);
           //playVideo();
           updateStatus(0, 'allow', t('In Call'));
         }
@@ -896,11 +902,10 @@ function MainScreen(): React.JSX.Element {
         good = false;
       }
     });
-    if (good) {
-      endVideo = tvideo;
-    } else {
-      endVideo = tvideof;
-    }
+
+    setPaused(true);
+    setIsGood(good)
+
     setShowVideo(true);
     console.log('About to restart video');
     restartVideo();
@@ -919,9 +924,13 @@ function MainScreen(): React.JSX.Element {
     console.log('Restarting video: ', videoPlayerRef);
     if (videoPlayerRef.current) {
       videoPlayerRef.current.seek(0); // Seek to the beginning (0 seconds)
-      setPaused(false); // Start playing after seeking
-      console.log('Set pause to false');
     }
+    if (failVideoPlayerRef.current) {
+      failVideoPlayerRef.current.seek(0); // Seek to the beginning (0 seconds)
+    }
+
+    setPaused(false); // Start playing after seeking
+    console.log('Set pause to false');
   };
 
   useEffect(() => {
@@ -1146,6 +1155,25 @@ function MainScreen(): React.JSX.Element {
       console.log('after DELAYED isCallMuted', callMuted);
     }, 500);
   };
+
+  const switchAudioOutput = async () => {
+    var speakerOutput = await ClientManager.isSpeaker();
+    console.log('Before speakerOutput', speakerOutput);
+    if (speakerOutput) {
+      ClientManager.setSpeaker(false);
+      setIsSpeaker(false);
+    } else {
+      ClientManager.setSpeaker(true);
+      setIsSpeaker(true);
+    }
+    speakerOutput = await ClientManager.isSpeaker();
+    console.log('after audio route', speakerOutput);
+    setTimeout(async () => {
+      speakerOutput = await ClientManager.speakerOutput();
+      console.log('after DELAYED speakerOutput', speakerOutput);
+    }, 500);
+  };
+
   const reset = async (useFront = false) => {
     console.log('Reset!');
     const newTasks = tasks.map((c, i) => {
@@ -1757,7 +1785,17 @@ function MainScreen(): React.JSX.Element {
                 ref={videoPlayerRef}
                 source={endVideo}
                 paused={paused}
-                style={[styles.video, {height: showVideo ? 228 : 0}]}
+                style={[styles.video, {height: showVideo && isGood ? 228 : 0}]}
+                repeat={false}
+                muted={true}
+                disableFocus={true}
+                disableAudioSessionManagement={true}
+              />
+               <Video
+                ref={failVideoPlayerRef}
+                source={endFailVideo}
+                paused={paused}
+                style={[styles.video, {height: showVideo && !isGood? 228 : 0}]}
                 repeat={false}
                 muted={true}
                 disableFocus={true}
@@ -1838,6 +1876,25 @@ function MainScreen(): React.JSX.Element {
               },
             ]}>
             {inCall ? (
+              <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center'}}>
+               {Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => switchAudioOutput()}>
+                <Image
+                  style={[
+                    styles.smallIcon,
+                    {
+                      height: 50,
+                      width: 50,
+                      marginRight: 60,
+                    },
+                  ]}
+                  source={
+                    isSpeaker
+                      ? require('../images/speaker.png')
+                      : require('../images/mobilephone.png')
+                  }></Image>
+              </TouchableOpacity>
+               )}
               <TouchableOpacity onPress={() => doMute()}>
                 <Image
                   style={[
@@ -1854,6 +1911,7 @@ function MainScreen(): React.JSX.Element {
                       : require('../images/unmuted.png')
                   }></Image>
               </TouchableOpacity>
+              </View>
             ) : null}
             <TouchableOpacity onPress={() => reset(true)}>
               <Image

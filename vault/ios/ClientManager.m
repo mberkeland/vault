@@ -8,10 +8,12 @@
 #import "ClientManager.h"
 #import "EventEmitter.h"
 #import <VonageClientSDKVoice/VonageClientSDKVoice.h>
+#import <AVFoundation/AVFoundation.h>
 
 @interface ClientManager ()
 @property VGVoiceClient *client;
 @property (nonatomic, assign) BOOL isMutedInternal;
+@property (nonatomic, assign) BOOL isSpeaker;
 @end
 
 @implementation ClientManager
@@ -60,6 +62,7 @@ RCT_EXPORT_METHOD(makeCall:(NSString *)number) {
     [ClientManager.shared.eventEmitter sendCallStateEventWith:@"On Call"];
     [ClientManager.shared setCallId:call];
     self.isMutedInternal = false;
+    self.isSpeaker = false;
     [self enableNoiseSuppression];
   }];
 }
@@ -113,11 +116,47 @@ RCT_EXPORT_METHOD(setMuted:(BOOL)domute) {
   
 }
 
+RCT_EXPORT_METHOD(setSpeaker:(BOOL)toSpeaker) {
+  if (!ClientManager.shared.callId) {
+    return;
+  }
+  // Audio route changes MUST happen on the main thread to avoid crashes
+  dispatch_async(dispatch_get_main_queue(), ^{
+    AVAudioSession *session = [AVAudioSession sharedInstance];
+    NSError *error = nil;
+
+    if (toSpeaker) {
+      NSLog(@"Switching to Speaker for call: %@", ClientManager.shared.callId);
+      // Set the override to speaker
+      [session overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker error:&error];
+      if (error) {
+        NSLog(@"Error switching to speaker: %@", error.localizedDescription);
+      } else {
+        self.isSpeaker = true;
+      }
+    } else {
+      NSLog(@"Switching to Receiver for call: %@", ClientManager.shared.callId);
+      // Remove the override to return to the default (Earpiece/Receiver)
+      [session overrideOutputAudioPort:AVAudioSessionPortOverrideNone error:&error];
+      if (error) {
+        NSLog(@"Error switching to receiver: %@", error.localizedDescription);
+      } else {
+        self.isSpeaker = false;
+      }
+    }
+  });
+}
+
 RCT_EXPORT_METHOD(isCallMuted:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
   resolve(@(self.isMutedInternal));
 }
 
+RCT_EXPORT_METHOD(isSpeaker:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  resolve(@(self.isSpeaker));
+}
 
 @end
