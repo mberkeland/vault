@@ -51,12 +51,12 @@ utils.getIniStuff().then((res) => {
   console.log("Got ini: ", gnids.masterkey);
 });
 const vid = 949;
-const sid = 790;
+const sid = 790; // was 2
 const sbox = 953;
 var vonage;
 var users = [];
 var requests = [];
-var ws_url = process.env.diana ? "wss://" + process.env.diana : "wss://neru-ef3346a6-v2sonic-v2sonic.use1.runtime.vonage.cloud"; //wsprefix + server_url.slice(5); // https://
+var ws_url = process.env.diana ? "wss://" + process.env.diana : "wss://neru-ef3346a6-v2sonic2-v2sonic2.use1.runtime.vonage.cloud"; //wsprefix + server_url.slice(5); // https://
 var pkey;
 var pusher;
 app.use(express.json());
@@ -130,6 +130,7 @@ async function getSB(id) {
 }
 
 async function startup() {
+  await vcrstate.set('14083753079', "Hello");
   utils.getNexmo(vid).then((result) => {
     console.log("Creating SilentAuth user record for " + vid, result.key, result.app_id);
     users[vid] = result;
@@ -185,18 +186,20 @@ async function startup() {
             }
           }
         };
-        vonage.applications
-          .updateApplication({
-            id: result.app_id,
-            name: "VIDS",
-            capabilities: caps,
-          })
-          .then((result) => {
-            //console.log(result.capabilities.verify, result.capabilities.network_apis, result.capabilities.networkApis);
-          })
-          .catch((error) => {
-            console.error(error);
-          });
+        if (!process.env.VCR_INSTANCE_PUBLIC_URL.includes("-debug-")) {
+          vonage.applications
+            .updateApplication({
+              id: result.app_id,
+              name: "VIDS",
+              capabilities: caps,
+            })
+            .then((result) => {
+              //console.log(result.capabilities.verify, result.capabilities.network_apis, result.capabilities.networkApis);
+            })
+            .catch((error) => {
+              console.error(error);
+            });
+        }
       })
       .catch((err) => console.error(err));
   });
@@ -205,7 +208,7 @@ async function startup() {
     users[sid] = result;
     users[sid].id = vid;
     users[sid].request_id = null;
-    console.log("Creating Identity Insights user: ", users[sid].app_id, users[sid].keyfile);
+    console.log("Creating Identity Insights user: ", users[sid].app_id);
 
   });
   if (!process.env.VCR_INSTANCE_PUBLIC_URL.includes("-debug-")) {
@@ -219,7 +222,9 @@ async function startup() {
     }, 30000);
   }
   await getSB(sbox);
-  console.log("****************************** TEF Location")
+  var tmp = await vcrstate.get('14083753079');
+
+  console.log("****************************** VCR state: ", tmp)
   var lat = 40.44509;
   var long = -3.6939;
   //await doTef(tef_phone, lat, long );
@@ -304,6 +309,7 @@ app.post("/checkAuthentication", async (req, res) => {
           console.log("Not enough steps finished yet.. keep waiting: ", counter)
         }
       } else {
+        console.log("No stuff in checkAuthentication yet.. keep waiting: ", counter)
       }
     }
     if (counter++ > 24) {
@@ -579,7 +585,7 @@ app.post("/getAi", async (req, res) => {
   var results = "allow";
   var deviceId = req.body.id;
   var methods = req.body.methods ?? [];
-  var lang = req.body.lang??'en';
+  var lang = req.body.lang ?? 'en';
 
   var jwt = null;
   if (!phone) {
@@ -699,44 +705,265 @@ app.get("/answer", async (req, res) => {
   var lang = 'en';
   if (stuff && stuff.deviceId) {
     stream = stuff.deviceId;
-    lang = stuff.lang??'en';
+    lang = stuff.lang ?? 'en';
   }
-  let url = ws_url + "/socket?uid=" + uuid + "&streamid=" + stream + "&orig_uuid=" + uuid + "&region=us&promptId=" + promptId + "&video=1&usefilter=" + 1+"&voice="+lang;
+  var conf = "conf_" + uuid;
+  let url = ws_url + "/socket?uid=" + uuid + "&streamid=" + stream + "&orig_uuid=" + uuid + "&region=us&promptId=" + promptId + "&video=1&usefilter=" + 1 + "&voice=" + lang + "&orig_number=u" + req.query.from_user;
   var ncco = [
-    {
-      action: "connect",
-      from: "Vonage",
-      limit: 300,
-      endpoint: [
-        {
-          type: "websocket",
-          uri: url,
-          //server_wss + "/socket?region=" + region + "&con_uuid=" + req.query.uuid + "&orig_uuid=" + req.query.uuid + "&orig_number=" + req.query.from + "&orig_to=" + req.query.to,
-          "content-type": "audio/l16;rate=16000",
-        },
-      ],
-    },
-    /*
+    /*    {
           action: "connect",
-          from: "12074014183",//users[vid].vfrom,
-          endpoint: [ 
-            { type: "phone",
-              number: req.query.to } 
-          ]
-          }
-          */
-  ]
+          from: "Vonage",
+          limit: 300,
+          endpoint: [
+            {
+              type: "websocket",
+              uri: url,
+              //server_wss + "/socket?region=" + region + "&con_uuid=" + req.query.uuid + "&orig_uuid=" + req.query.uuid + "&orig_number=" + req.query.from + "&orig_to=" + req.query.to,
+              "content-type": "audio/l16;rate=16000",
+            },
+          ],
+        },*/
+    {
+      action: "conversation",
+      name: conf,  // to handle multiple separate conf calls with VIDS Live Translation demo
+      endOnExit: true, // valid ONLY for 1-to-1 calls (not for multi-party conference calls), so it ends any websockets still up and the other's participant call leg
+    }
+  ];
   console.log("Returning answer ncco: ", ncco);
   if (stuff) {
     stuff.uuid = uuid;
+    stuff.url = url;
+    stuff.conf = conf;
     await vcrstate.set('' + uuid, stuff).then(() => {
-      vcrstate.expire('' + uuid, 300);
+      vcrstate.expire('' + uuid, 600);
       console.log("UUID state expiration set: ", uuid)
     })
     console.log("Updated vcrstate for phone ", req.query.from_user, stuff);
   }
+  // Now register a callback from Diana for when we need a transfer:
+  var diana = "https://" + process.env.diana + "/register";
+  axios.post(diana, {
+    phone: 'u' + req.query.from_user,
+    url: server_url + "/transfer?uuid=" + uuid + "&orig_number=u" + req.query.from_user + "&orig_to=" + req.query.to,
+    uuid: uuid,
+    deviceId: stream
+  });
   return res.status(200).json(ncco).end();
 });
+app.post("/transfer", async (req, res) => {
+  console.log("vapi transfer webhook: ", req.body);
+  var date = new Date().toLocaleString();
+  var dest;
+  if (req.body.transfer) {
+    var to = req.body.transfer;
+    if (to.toLowerCase().startsWith("sip")) {
+      var headers = { "custom-session": "" + novaSession, conversation: `${server_url}/conversation?session=${req.body.novaSession}`, phone: req.body.phone }
+      console.log("SIP Headers: ", headers)
+      dest = {
+        type: "sip",
+        uri: '' + to, //"sip:19174634229@vcc-us.api.vonage.com",
+        headers: headers
+      };
+      from = req.body.phone;
+    } else {
+      dest = {
+        type: 'phone',
+        number: to,
+      };
+    }
+    var obj = {
+      answer_url: [server_url + '/ws_answer?original_uuid=' + req.body.uuid + '&transfer=true&conference_name=conf_' + req.body.uuid + '&deviceId=' + req.body.deviceId],
+      to: [dest],
+      from: {
+        type: 'phone',
+        number: users[vid].from,
+      },
+    };
+    console.log("Connection obj: ", obj)
+    setTimeout(async () => {
+      vonage.voice.createOutboundCall(obj)
+        .then(async (result) => {
+          console.log("Call transfer results: ", result)
+        })
+        .catch((error) => console.error(error));
+    }, 1000)
+  }
+  return res.status(200).end();
+})
+app.post("/event", async (req, res) => {
+  console.log("vapi event webhook: ", req.body);
+  var date = new Date().toLocaleString();
+  if (req.body.type == 'transfer') { //MSB
+    console.log("Got transfer, query params: ", req.query)
+    var stuff = await vcrstate.get('' + req.body.uuid);
+    var transfer = await vcrstate.get('transfer_' + req.body.uuid);
+    if (transfer) {
+      // Presumably this is the second transfer so we want to /infer action 
+      console.log("Transfer with inference, so doing /infer action: ", req.body, transfer);
+      vcrstate.delete('transfer_' + req.body.uuid) // So we don;t transfer twice...
+      const targetConv = transfer.original_uuid; // For individual leg
+      try {
+        var prompt = 'Do not interpret or offer help, ONLY repeat whatever is said.  Do not add to it.'
+        //            const inferUrl = `${v.apiHost}/v1/conversations/${encodeURIComponent('' + targetConv)}/infer`;
+        var st = "select * from prompts where id=33"; // Default, in case prompt is not found in DB
+        let ures2 = await utils.getDb('prompts', st, null);
+        console.log("ures2 rows: ", ures2.length)
+        if (!ures2?.length && ures2[0].prompt) {
+          console.log("No tools!?!?!");
+        } else {
+          console.log("Found prompt ", ures2[0].id)
+          prompt = ures2[0].prompt
+        }
+        console.log("Using infer prompt: ", prompt)
+        const inferUrl = `https://api-us.vonage.com/v1/calls/${encodeURIComponent('' + targetConv)}/infer`;
+        const jwt = tokenGenerate(users[vid].app_id, users[vid].keyfile, {});
+        const inferResp = await axios.put(
+          inferUrl,
+          {
+            audio: false,
+            event_url: [`${server_url}/infer?deviceId=${transfer.deviceId}`],
+            prompt: prompt
+          },
+          {
+            headers: {
+              'Authorization': 'Bearer ' + jwt,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        console.log("Infer PUT status: ", targetConv, inferResp.status, inferResp.data);
+      } catch (err) {
+        console.error("Infer PUT error: ", targetConv, err.response?.status, err.response?.data ?? err.message);
+      }
+    } else if (stuff) {
+      console.log("Found stuff for transfer, creating outbound call: ", stuff);
+      //      vcrstate.delete('' + req.body.uuid) // So we don;t transfer twice...
+      vonage.voice.createOutboundCall({
+        to: [{
+          type: 'websocket',
+          uri: stuff.url,
+          'content-type': 'audio/l16;rate=16000',  // NEVER change the content-type parameter argument
+          headers: {}
+        }],
+        from: {
+          type: 'phone',
+          number: 19999999999 // cannot use a longer than 15-digit string (e.g. not call_uuid)
+        },
+        answer_url: [server_url + '/ws_answer?original_uuid=' + req.body.uuid + '&conference_name=' + stuff.conf],
+      })
+        .then(res => console.log(">>> WebSocket create status:", res))
+        .catch(err => console.error(">>> WebSocket create error:", err));
+    }
+
+  }
+  return res.status(200).end();
+});
+function normalizeJson(json) {
+  if (!json) return null;
+  if (json.type != 'infer') return null;
+  if ((json.stop_reason && json.stop_reason == 'INTERRUPTED') || !json.text) {
+    console.log("Inference data was interrupted or text empty, ignoring");
+    return;
+  }
+  var inferenceText = String(json.text || '').trim()
+  try {
+    var decodedInferenceText = JSON.parse(inferenceText);
+    if (typeof decodedInferenceText == 'string') inferenceText = decodedInferenceText.trim();
+  } catch (e) {
+    console.log("Inference text is not valid JSON, continuing with normalization: ", inferenceText)
+  }
+  inferenceText = inferenceText.replace(/\\"/g, '"');
+  if (inferenceText.charAt(0) == '"' && inferenceText.charAt(1) == '{') {
+    inferenceText = inferenceText.slice(1);
+  }
+  inferenceText = inferenceText.replace(/([_"]) +/g, '$1')
+    .replace(/ +"/g, '"');
+  if (inferenceText.charAt(0) != '{') inferenceText = '{' + inferenceText;
+  if (inferenceText.charAt(inferenceText.length - 1) != '}') {
+    if (((inferenceText.match(/"/g) || []).length % 2) != 0) inferenceText += '"';
+    inferenceText += '}';
+  }
+  inferenceText = inferenceText
+    .replace(/([{,]\s*)([A-Za-z][A-Za-z0-9_ ]*)\s*:/g, function (match, prefix, name) {
+      return prefix + '"' + name.trim().replace(/_\s+/g, '_') + '":';
+    })
+    .replace(/,\s*}/g, '}');
+  var obj = JSON.parse(inferenceText);
+  console.log("Normalized inference JSON: ", obj);
+  var normalizeInference = function (value) {
+    if (Array.isArray(value)) return value.map(normalizeInference);
+    if (value && typeof value == 'object') {
+      Object.keys(value).forEach(function (key) {
+        var normalizedKey = key.trim().replace(/_\s+/g, '_');
+        var normalizedValue = normalizeInference(value[key]);
+        if (normalizedKey != key) delete value[key];
+        value[normalizedKey] = normalizedValue;
+      });
+      return value;
+    }
+    if (typeof value == 'string') return value.trim().replace(/_\s+/g, '_');
+    return value;
+  };
+  obj = normalizeInference(obj);
+  if(obj.interrupted) {
+    console.log("Inference data was interrupted, ignoring");
+    return null;
+  }
+  return obj;
+}
+// Inference webhook. Placeholder for now: log the incoming body and ack with 200.
+app.post("/infer", async (req, res) => {
+  console.log("[/infer] incoming body:", JSON.stringify(req.body, null, 2));
+  console.log("[/infer] query params:", req.query);
+  if (req.body.role == "ASSISTANT") {
+    req.body.mode = 'INFER'
+    var obj = normalizeJson(req.body);
+    if (obj) {
+      var deviceId = req.query.deviceId;
+      if (Object.prototype.hasOwnProperty.call(obj, 'trigger') && deviceId) {
+        var triggerStateKey = 'infer_trigger_' + deviceId;
+        var lastTrigger = await vcrstate.get(triggerStateKey);
+        if (lastTrigger === obj.trigger) {
+          console.log("[/infer] dropping duplicate trigger for device:", deviceId, obj.trigger);
+          return res.sendStatus(200);
+        }
+        await vcrstate.set(triggerStateKey, obj.trigger);
+        vcrstate.expire(triggerStateKey, 300);
+      }
+      
+      req.body.text = JSON.stringify(obj);
+      console.log("Normalized inference text: ", req.body.text);
+      pusher.trigger('nova', "event", req.body);
+      if (deviceId && obj) {
+        obj.type='infer';
+        pusher.trigger('vault-' + deviceId, "infer", obj);
+      }
+    }
+  }
+  res.sendStatus(200);
+});
+
+app.get("/ws_answer", async (req, res) => {
+  console.log("Got ws_answer: ", req.query, req.body)
+  var nccoResponse = [];
+  if (req.query.conference_name) {
+    var eox = req.query.transfer ? true : false;
+    nccoResponse = [
+      {
+        action: "conversation",
+        name: '' + req.query.conference_name,  // to handle multiple separate conf calls with VIDS Live Translation demo
+        endOnExit: eox, // ends any websockets still up and the other's participant call leg, only if a transfer`
+      }
+    ]
+    if (req.query.transfer) {
+      await vcrstate.set('transfer_' + req.query.uuid, req.query).then(() => {
+        vcrstate.expire('transfer_' + req.query.uuid, 300);
+      })
+      console.log("Transfer info on answer NCCO: ", req.query)
+    }
+  }
+  res.status(200).json(nccoResponse);
+})
 app.post("/stepResults", async (req, res) => {
   console.log("Step Results: ", req.body);
   var date = new Date().toLocaleString();
@@ -769,11 +996,6 @@ app.post("/stepResults", async (req, res) => {
     }
     console.log("Got stuff on stepResults: ", stuff)
   }
-  return res.status(200).end();
-});
-app.post("/event", async (req, res) => {
-  console.log("vapi event webhook: ", req.body);
-  var date = new Date().toLocaleString();
   return res.status(200).end();
 });
 async function createCamara(phoneNumber, uuid, sandbox = false) {
@@ -889,18 +1111,23 @@ async function tefLocation(token, phone, lat, long) {
     }
   }
 }
-async function createSilent(phoneNumber) {
+async function createSilent(phoneNumber, mobile = true) {
   const brand = "VIDS";
   console.log("Creating silent_auth request for: ", phoneNumber);
   const body = {
     brand: brand,
     channel_timeout: 60,
     workflow: [
-      { channel: "silent_auth", to: phoneNumber },
-      //            { channel: "sms", to: phoneNumber },
+      //{ channel: "silent_auth", to: phoneNumber }
+      { channel: "sms", to: phoneNumber },
       //    {channel: "voice", to: phoneNumber}
     ],
   };
+  if (mobile) {
+    console.log("Adding Silent Auth to top of the Verify Workflow")
+    body.channel_timeout = 120;
+    body.workflow.unshift({ channel: "silent_auth", to: phoneNumber });
+  }
   console.log("Sending V2 workflow: ", body);
   const jwt = tokenGenerate(users[sid].app_id, users[sid].keyfile, {});
   //console.log("jwt: " + jwt);
@@ -1023,17 +1250,167 @@ app.all("/nverify", async (req, res) => {
   }
   return res.status(200).json({ results: okay }).end();
 });
+
+
+async function getSim(phone) {
+  console.log("Using Identity Insights: ", users[sid].app_id);
+  var action = "block"; // Default action is to block
+  const jwt = tokenGenerate(users[sid].app_id, users[sid].keyfile, {});
+  const params = {
+    phone_number: phone,
+    insights: {
+      format: {},
+      original_carrier: {},
+      current_carrier: {},
+      sim_swap: {
+        period: 240
+      },
+    },
+  };
+  //const clientInsights = new IdentityInsights(jwt, {});
+
+  //const results = await clientInsights.getIdentityInsights(params);
+  var obj = {
+    phone_number: phone,
+    purpose: "FraudPreventionAndDetection",
+    insights: {
+      format: {},
+      sim_swap: {
+        period: 240
+      },
+      original_carrier: {},
+      current_carrier: {}
+    }
+  }
+  var results = await axios.post("https://api-us.vonage.com/v0.1/identity-insights", obj, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + jwt,
+    },
+  });
+  console.log("Got Number Insightresults: ", results.data, results.data?.insights?.sim_swap);
+  if (results.data?.insights?.sim_swap?.hasOwnProperty('is_swapped')) {
+    action = (results.data.insights.sim_swap.is_swapped) ? "block" : "allow";
+  } else if (results.data?.insights?.sim_swap?.status) {
+    action = results.data?.insights?.sim_swap?.status.code
+  }
+  return action;
+}
+async function cognitoRequest(action, body) {
+  var region = process.env.cognitoRegion || 'us-east-1';
+  var data;
+  try {
+    /*
+    const response = await fetch(
+      `https://cognito-idp.${region}.amazonaws.com/`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-amz-json-1.1',
+          'X-Amz-Target': `AWSCognitoIdentityProviderService.${action}`,
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    data = await response.json();
+    if (!response.ok) {
+      console.log("Cognito request response error: ", data.message || data.__type || 'Request failed')
+      return null;
+    }
+    */
+    const results = await axios.post(
+      `https://cognito-idp.${region}.amazonaws.com/`,
+      body,
+      {
+        headers: {
+          'Content-Type': 'application/x-amz-json-1.1',
+          'X-Amz-Target': `AWSCognitoIdentityProviderService.${action}`,
+        },
+      }
+    );
+    console.log("Got cognito response: ", results.data)
+    data = results.data
+
+  } catch (err) {
+    console.log("Cognito request error: ", err?.code, err?.status, err?.data)
+  }
+  return data;
+}
+app.post("/cognitoInit", async (req, res) => {
+  var date = new Date().toLocaleString();
+  console.log(`cognitoInit request at ${date} : `, req.body);
+  if (!req.body.phone) return res.status(200).end();
+  var phone = req.body.phone.replace(/\D/g, "");
+  var deviceId = req.body.deviceId ?? '';
+  var body = {
+    AuthFlow: 'CUSTOM_AUTH',
+    ClientId: process.env.cognitoClient,
+    AuthParameters: {
+      USERNAME: '+' + phone,
+      DEVICEID: deviceId
+    }
+  }
+  var cog = await cognitoRequest('InitiateAuth', body)
+  console.log("Cognito initialization request results: ", cog)
+  if (cog?.Session) {
+    console.log("Got session, storing data: ", phone);
+    try {
+      await vcrstate.set('' + phone, cog).then(() => {
+        console.log("State set, setting expiry")
+        vcrstate.expire('' + phone, 300);
+        console.log("Cognito Request state expiration set: ", uuid)
+      })
+    } catch (err) {
+      console.log("vcrstate.set error")
+    }
+  }
+  console.log("Returning 200ok for cognitoInit")
+  return res.status(200).json({ results: cog }).end();
+})
 app.post("/cognitoStart", async (req, res) => {
   var date = new Date().toLocaleString();
   console.log(`cognitoStart request at ${date} : `, req.body);
-  var date = new Date().toLocaleString();
-  return res.status(200).json({ results: okay }).end();
+  var mobile = req.body.mobile ?? false;
+  //mobile = true /// for test
+  var phone = req.body.user?.replace(/\D/g, "");
+  var deviceId = req.body.deviceId ?? '';
+  if (!phone) return res.status(200).end();
+  var block = await getSim(phone)
+  var redirect = "";
+  let sreq = await createSilent(phone, mobile ? true : false);
+  console.log("Cognito createSilent results: ", sreq);
+  redirect = sreq.body?.check_url;
+  var reqid = sreq.body?.request_id;
+  var ret = { simswap: block, redirect: redirect, request_id: reqid };
+  console.log("Return from cognitoStart: ", ret)
+  return res.status(200).json(ret).end();
 })
 app.post("/cognitoResults", async (req, res) => {
   var date = new Date().toLocaleString();
   console.log(`cognitoResults request at ${date} : `, req.body);
-  var date = new Date().toLocaleString();
-  return res.status(200).json({ results: okay }).end();
+  if (!req.body.phone || !req.body.code) return res.status(200).end();
+  var phone = req.body.phone.replace(/\D/g, "");
+  var code = req.body.code;
+  var stuff = await vcrstate.get('' + phone);
+  if (!stuff) {
+    console.log("Not finding stored cognito session for ", phone)
+    return res.status(200).end();
+  }
+  var session = stuff.Session;
+  var body = {
+    ClientId: process.env.cognitoClient,
+    ChallengeName: 'CUSTOM_CHALLENGE',
+    Session: session,
+    ChallengeResponses: {
+      USERNAME: '+' + phone,
+      ANSWER: code,
+    }
+  }
+  var cog = await cognitoRequest('RespondToAuthChallenge', body)
+  console.log("Cognito initialization request: ", cog)
+
+  return res.status(200).json({ results: cog }).end();
 })
 
 startup();

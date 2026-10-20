@@ -4,11 +4,18 @@ const request = require('request');
 const vini = process.env.vidstoken
 const baseurl = process.env.baseurl
 
+// Disable TLS/TCP connection reuse. Reused keep-alive sockets through the
+// tunnel/proxy are the usual cause of intermittent OpenSSL "bad record mac" /
+// "decryption failed" errors, so we force a fresh socket per request.
+const https = require('https');
+const http = require('http');
 var VIDS = axios.create({
     baseURL: baseurl,
     headers: {
         "Content-Type": "application/json",
     },
+    httpsAgent: new https.Agent({ keepAlive: false }),
+    httpAgent: new http.Agent({ keepAlive: false }),
 });
 var gnids;
 
@@ -34,14 +41,46 @@ module.exports = {
 
     },
     async getNexmo(userId) {
-        resp = await VIDS.post("getVonage", {
+        resp = await VIDS.post("getNexmo", {
             userid: userId
         })
         //console.log("getVonage response: ", resp.data)
         const attrs = resp.data;
         return attrs;
     },
-
+    async getDb(dbName, st = '', parms = []) {
+        // Retry transient network/TLS failures (e.g. OpenSSL "bad record mac",
+        // ECONNRESET) which come from a corrupted/reused connection rather than
+        // a real error. Up to 3 attempts with a short backoff.
+        var lastErr;
+        for (var attempt = 1; attempt <= 3; attempt++) {
+            try {
+                resp = await VIDS.post("doDB", {
+                    dbName: dbName,
+                    st: st,
+                    parms: parms
+                });
+                // resp.data is the flat array of row objects for SELECTs.
+                return resp.data;
+            } catch (err) {
+                lastErr = err;
+                var msg = ('' + (err && err.message)).toLowerCase();
+                var code = err && err.code;
+                var transient =
+                    msg.includes('bad record mac') ||
+                    msg.includes('decryption failed') ||
+                    msg.includes('ssl') ||
+                    code === 'ECONNRESET' ||
+                    code === 'ECONNABORTED' ||
+                    code === 'EPIPE' ||
+                    code === 'ETIMEDOUT';
+                console.log(`getDb attempt ${attempt} failed (transient=${transient}):`, err && err.message);
+                if (!transient || attempt === 3) throw err;
+                await new Promise((r) => setTimeout(r, 250 * attempt));
+            }
+        }
+        throw lastErr;
+    },
     getIniStuff: function () {
         console.log("GetIniStuff")
         return new Promise((resolve, reject) => {
@@ -130,6 +169,7 @@ module.exports = {
         return payload[param];
     },
     async registerWA(number, url, type = 'incoming') {
+        return;
         // NOTE: Special Case scenario for MX (+52) numbers using "1" (mobile) addition...
         if (type == 'incoming' && ('' + number).startsWith('52') && ('' + number).charAt(2) != '1') {
             number = number.substring(0, 2) + '1' + number.substring(2);
@@ -154,6 +194,7 @@ module.exports = {
         );
     },
     async registerWAKeyword(keyword, url) {
+        return;
         request.post('https://vids.vonage.com/wa/setKeyword', {
             headers: {
                 "content-type": "application/json",

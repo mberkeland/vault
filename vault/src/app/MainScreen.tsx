@@ -4,7 +4,7 @@
  *
  * @format
  */
-const ver = '2.26';
+const ver = '2.40';
 const DEBUG = false;
 const LOCAL = false;
 import React, {useState, useEffect} from 'react';
@@ -112,7 +112,8 @@ var udpUrl = '10.47.111.20';
 var udpPort = 50000;
 var bcolor = '#42084e'; //'#ECFFDC';
 var endVideo = tvideo;
-var endFailVideo = tvideof
+var endFailVideo = tvideof;
+var vonito = 'https://neru-ef3346a6-debug-vonito.use1.runtime.vonage.cloud';
 const filex = require('../images/redx2.gif');
 const fileq = require('../images/qmark.png');
 const filec = require('../images/greencheck1.gif');
@@ -174,6 +175,7 @@ function MainScreen(): React.JSX.Element {
   const isDarkMode = false; //useColorScheme() === 'dark';
   const doDebug = async inp => {
     //console.log('Inp: ', inp);
+    return; // Comment out to enable debug server
     let body = inp;
     body.product = 'vault';
     if (typeof inp === 'string') {
@@ -226,6 +228,8 @@ function MainScreen(): React.JSX.Element {
   const videoPlayerRef = useRef(null);
   const failVideoPlayerRef = useRef(null);
   const demoRef = useRef(false);
+  const cognito = useRef(true);
+
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
   const [inputNumber, setInputNumber] = useState(null);
@@ -310,13 +314,16 @@ function MainScreen(): React.JSX.Element {
       }
     });
 
-    const resp = await fetch(`https://vids.vonage.com/vfraud/redirector`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const resp = await fetch(
+      `https://neru-ef3346a6-vmcp-vmcp.use1.runtime.vonage.cloud/redirector`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({phone: '' + gPhone, product: 'vault'}),
       },
-      body: JSON.stringify({phone: '' + gPhone, product: 'vault'}),
-    });
+    );
     var data = await resp.json();
     console.log('Response from Initial Redirector: ', data.baseUrl);
     if (data.baseUrl) {
@@ -325,6 +332,9 @@ function MainScreen(): React.JSX.Element {
         vUrl = data.baseUrl;
       }
       AsyncStorage.setItem('@vUrl', vUrl);
+      if (data.vonito) {
+        vonito = data.vonito;
+      }
     }
     if (data.udp) {
       udpUrl = data.udp;
@@ -632,6 +642,9 @@ function MainScreen(): React.JSX.Element {
           console.log('Got authenticate event, starting looper ');
           looper();
         }
+        if (data.type == 'infer') {
+          console.log('Got infer event, notify user: ', data.trigger);
+        }
       },
     });
     await pusher.connect();
@@ -904,7 +917,7 @@ function MainScreen(): React.JSX.Element {
     });
 
     setPaused(true);
-    setIsGood(good)
+    setIsGood(good);
 
     setShowVideo(true);
     console.log('About to restart video');
@@ -964,8 +977,8 @@ function MainScreen(): React.JSX.Element {
   const saveSettings = () => {
     setSettings(false);
     setTimeout(() => {
-      setFront(true)
-    }, 300)
+      setFront(true);
+    }, 300);
     console.log('Writing settings to storage: ');
     AsyncStorage.setItem('fast', '' + fast);
     AsyncStorage.setItem('demo', '' + demoRef.current);
@@ -1064,6 +1077,70 @@ function MainScreen(): React.JSX.Element {
         setDeeper(false);
         setFront(false);
       }, timer);
+    }
+  };
+  const doCognito = async () => {
+    console.log('Starting cognito check');
+    setDeeper(false);
+    setFront(false);
+    var index = 2;
+    var data;
+    try {
+      const resp = await fetch(`${vonito}/verifyInit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({phone: '' + gPhone, deviceId: deviceId}),
+      });
+      data = await resp.json();
+      console.log('Response from Cognito initial query: ', data);
+    } catch (err) {
+      console.log('Cognito init error: ', err);
+      return;
+    }
+    var code = '1234';
+    try {
+      if (data.redirectUrl) {
+        console.log('Calling over cellular: ', data.redirectUrl);
+        const jopenCheckResponse =
+          await VonageVerifySilentAuthModule.openWithDataCellular(
+            data.redirectUrl,
+            true,
+          );
+        const openCheckResponse = JSON.parse(jopenCheckResponse);
+        console.log('Redirect response: ', openCheckResponse);
+        doDebug({
+          type: 'checkResponse',
+          checkResponse: openCheckResponse,
+        });
+        if (openCheckResponse.http_status > 299) {
+          updateStatus(index, 'block', 'Invalid number');
+        } else if (openCheckResponse.response_body?.code) {
+          // Must be SA
+          updateStatus(index, 'allow', 'Number verified');
+          code = openCheckResponse.response_body?.code;
+        }
+      }
+    } catch (err) {
+      console.log('Cognito cellular verification error: ', err);
+    }
+    try {
+      const resp2 = await fetch(`${vonito}/verifyResults`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: '' + gPhone,
+          deviceId: deviceId,
+          code: '' + code,
+        }),
+      });
+      var data2 = await resp2.json();
+      console.log('Response from Cognito verify results: ', data2);
+    } catch (err) {
+      console.log('Cognito Verify response error: ', err);
     }
   };
   const loginHandler = async () => {
@@ -1196,7 +1273,7 @@ function MainScreen(): React.JSX.Element {
     if (useFront) {
       setTimeout(() => {
         setFront(true);
-      }, 300)
+      }, 300);
     }
     //setFront(true);
 
@@ -1328,8 +1405,7 @@ function MainScreen(): React.JSX.Element {
                     setSettings(true);
                     setPendingSettings(false);
                   }
-                }}
-                >
+                }}>
                 <ImageBackground
                   source={require('../images/TBackground.png')}
                   style={styles.front}>
@@ -1348,7 +1424,13 @@ function MainScreen(): React.JSX.Element {
                     source={require('../images/TBLogo-B.png')}
                     style={[
                       styles.logo2,
-                      {width: 200, height: 180, marginTop: 60, opacity: 1.0, overflow: 'hidden'},
+                      {
+                        width: 200,
+                        height: 180,
+                        marginTop: 60,
+                        opacity: 1.0,
+                        overflow: 'hidden',
+                      },
                     ]}></Image>
                   <Text
                     style={[
@@ -1360,7 +1442,7 @@ function MainScreen(): React.JSX.Element {
                     ]}>
                     {t('Call to speak to our agent')}
                   </Text>
-                  { Platform.OS === 'ios' && deeper && 
+                  {Platform.OS === 'ios' && deeper && (
                     <View style={[styles.rbutton, styles.absoluteMessage]}>
                       <TouchableOpacity
                         onPress={() => {
@@ -1375,7 +1457,27 @@ function MainScreen(): React.JSX.Element {
                         </Text>
                       </TouchableOpacity>
                     </View>
-                  }
+                  )}
+                  {cognito.current ? (
+                    <View style={{marginTop: -120, marginLeft: -80}}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          doCognito();
+                        }}>
+                        <Image
+                          source={require('../images/aws.png')}
+                          style={[
+                            styles.smallIcon,
+                            {
+                              width: 80,
+                              marginTop: 180,
+                              opacity: 1.0,
+                              marginRight: -70,
+                            },
+                          ]}></Image>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
                   <View style={{flexDirection: 'row', marginTop: 20}}>
                     <TouchableOpacity
                       onPress={() => {
@@ -1398,7 +1500,7 @@ function MainScreen(): React.JSX.Element {
                       onPress={() => {
                         setTimeout(() => {
                           setFront(false);
-                        }, 300)
+                        }, 300);
                       }}>
                       <Image
                         source={require('../images/hangup.png')}
@@ -1417,9 +1519,9 @@ function MainScreen(): React.JSX.Element {
                     style={styles.absoluteSettings}
                     onPress={() => {
                       setTimeout(() => {
-                          setFront(false)
-                          setPendingSettings(true);
-                      }, 300)
+                        setFront(false);
+                        setPendingSettings(true);
+                      }, 300);
                     }}>
                     <Image
                       style={styles.smallIcon} //{[styles.smallIcon, {marginTop: 70, marginLeft: 300}]}
@@ -1792,11 +1894,11 @@ function MainScreen(): React.JSX.Element {
                 disableFocus={true}
                 disableAudioSessionManagement={true}
               />
-               <Video
+              <Video
                 ref={failVideoPlayerRef}
                 source={endFailVideo}
                 paused={paused}
-                style={[styles.video, {height: showVideo && !isGood? 228 : 0}]}
+                style={[styles.video, {height: showVideo && !isGood ? 228 : 0}]}
                 repeat={false}
                 muted={true}
                 disableFocus={true}
@@ -1877,41 +1979,46 @@ function MainScreen(): React.JSX.Element {
               },
             ]}>
             {inCall ? (
-              <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center'}}>
-               {Platform.OS === 'ios' && (
-                <TouchableOpacity onPress={() => switchAudioOutput()}>
-                <Image
-                  style={[
-                    styles.smallIcon,
-                    {
-                      height: 50,
-                      width: 50,
-                      marginRight: 60,
-                    },
-                  ]}
-                  source={
-                    isSpeaker
-                      ? require('../images/speaker.png')
-                      : require('../images/mobilephone.png')
-                  }></Image>
-              </TouchableOpacity>
-               )}
-              <TouchableOpacity onPress={() => doMute()}>
-                <Image
-                  style={[
-                    styles.smallIcon,
-                    {
-                      height: 70,
-                      width: 70,
-                      marginRight: 50,
-                    },
-                  ]}
-                  source={
-                    muted
-                      ? require('../images/muted.png')
-                      : require('../images/unmuted.png')
-                  }></Image>
-              </TouchableOpacity>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity onPress={() => switchAudioOutput()}>
+                    <Image
+                      style={[
+                        styles.smallIcon,
+                        {
+                          height: 50,
+                          width: 50,
+                          marginRight: 60,
+                        },
+                      ]}
+                      source={
+                        isSpeaker
+                          ? require('../images/speaker.png')
+                          : require('../images/mobilephone.png')
+                      }></Image>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => doMute()}>
+                  <Image
+                    style={[
+                      styles.smallIcon,
+                      {
+                        height: 70,
+                        width: 70,
+                        marginRight: 50,
+                      },
+                    ]}
+                    source={
+                      muted
+                        ? require('../images/muted.png')
+                        : require('../images/unmuted.png')
+                    }></Image>
+                </TouchableOpacity>
               </View>
             ) : null}
             <TouchableOpacity onPress={() => reset(true)}>
@@ -1923,7 +2030,7 @@ function MainScreen(): React.JSX.Element {
               onPress={() => {
                 setTimeout(() => {
                   setSettings(true);
-                }, 300)
+                }, 300);
               }}>
               <Image
                 style={[styles.smallIcon]}
