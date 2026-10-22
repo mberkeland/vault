@@ -883,13 +883,19 @@ function normalizeJson(json) {
     if (((inferenceText.match(/"/g) || []).length % 2) != 0) inferenceText += '"';
     inferenceText += '}';
   }
+  var obj;
   inferenceText = inferenceText
     .replace(/([{,]\s*)([A-Za-z][A-Za-z0-9_ ]*)\s*:/g, function (match, prefix, name) {
       return prefix + '"' + name.trim().replace(/_\s+/g, '_') + '":';
     })
     .replace(/,\s*}/g, '}');
-  var obj = JSON.parse(inferenceText);
-  console.log("Normalized inference JSON: ", obj);
+    try {
+      obj = JSON.parse(inferenceText);
+      console.log("Normalized inference JSON: ", obj);
+    } catch (e) {
+      console.log("Error parsing normalized inference JSON: ", e, inferenceText);
+      return null;
+    }
   var normalizeInference = function (value) {
     if (Array.isArray(value)) return value.map(normalizeInference);
     if (value && typeof value == 'object') {
