@@ -22,11 +22,11 @@ export function FraudCheck({title, description, value}: FraudCheckProps) {
   }
   if (value == 1) {
     file = filec;
-    color = 'green';
+    color = 'lightgreen';
   }
   if (value == -3) {
     file = fileu;
-    color = 'darkgray';
+    color = 'lightgray';
   }
   if (value == -2) {
     file = filee;
@@ -34,7 +34,7 @@ export function FraudCheck({title, description, value}: FraudCheckProps) {
   }
   if (value == -4) {
     file = filel;
-    color = 'blue';
+    color = 'lightblue';
   }
 
   return (
@@ -46,7 +46,7 @@ export function FraudCheck({title, description, value}: FraudCheckProps) {
       ) : (
         <Image source={file} style={styles.icon}></Image>
       )}
-      <Text style={[styles.checkText]}>{title}</Text>
+      <Text style={[styles.checkText, {color: 'white'}]}>{title}</Text>
       <Text style={[styles.checkText2, {color: color}]}>{description}</Text>
     </View>
   );

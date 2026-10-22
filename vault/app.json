@@ -1,4 +1,5 @@
 {
   "name": "VonageVault",
-  "displayName": "VonageVault"
+  "displayName": "VonageVault",
+  "icon": "./assets/images/TBIcon.png"
 }

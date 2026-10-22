@@ -4,9 +4,11 @@
  *
  * @format
  */
-const ver = '1.10';
-
-import React, {useState, useEffect} from 'react';
+const ver = '2.42';
+const DEBUG = false;
+const LOCAL = false;
+import React, {useState, useEffect, useRef} from 'react';
+//import {AudioDeviceInfo, AudioManager} from 'react-native-audio-api';
 import type {PropsWithChildren} from 'react';
 import {
   SafeAreaView,
@@ -25,8 +27,15 @@ import {
   ActivityIndicator,
   NativeModules,
   Dimensions,
+  NativeEventEmitter,
+  Platform,
 } from 'react-native';
-
+import {
+  Pusher,
+  PusherMember,
+  PusherChannel,
+  PusherEvent,
+} from '@pusher/pusher-websocket-react-native';
 import {Colors} from 'react-native/Libraries/NewAppScreen';
 import BouncyCheckbox from 'react-native-bouncy-checkbox';
 import {styles} from './styles';
@@ -42,20 +51,68 @@ import GetLocation from 'react-native-get-location';
 import Video from 'react-native-video';
 import vvideo from '../images/vault.mp4';
 import rvideo from '../images/tluav.mp4';
+import tvideo from '../images/TBVault.mp4';
+import tvideof from '../images/TBVaultFail.mp4';
 import bedimage from '../images/bedrock.jpg';
+import {request, requestMultiple, PERMISSIONS} from 'react-native-permissions';
+import Sound from 'react-native-sound';
+import {SelectCountry} from 'react-native-element-dropdown';
+import merge from 'lodash.merge';
 
-const {VonageVerifySilentAuthModule} = NativeModules;
+var languages = [
+  {
+    value: 'en',
+    lable: 'English',
+  },
+  {
+    value: 'es',
+    lable: 'Spanish',
+  },
+  {
+    value: 'fr',
+    lable: 'French',
+  },
+  {
+    value: 'it',
+    lable: 'Italian',
+  },
+  {
+    value: 'de',
+    lable: 'German',
+  },
+  {
+    value: 'pt',
+    lable: 'Portuguese',
+  },
+  {
+    value: 'hi',
+    lable: 'Hindi',
+  },
+];
+import {trs} from './translations';
 
+var translations = trs;
+var tt = translations.en;
+var glang = 'en';
+const eventEmitter = new NativeEventEmitter(NativeModules.EventEmitter);
+const {VonageVerifySilentAuthModule, ClientManager} = NativeModules;
+const pusher = Pusher.getInstance();
+var channel = null;
 var phone = '14083753079';
 var started = null;
 var gPhone;
-var vUrl = 'https://neru-ef3346a6-vault-vault.use1.runtime.vonage.cloud';
+var gFailure;
+var vUrl = DEBUG
+  ? 'https://neru-ef3346a6-debug-vault.use1.runtime.vonage.cloud'
+  : 'https://neru-ef3346a6-vault-vault.use1.runtime.vonage.cloud';
 var phase = 0;
 var faceUrl = 'https://main.d3sn8is0cbxe5o.amplifyapp.com';
-var udpUrl = "10.47.111.20";
+var udpUrl = '10.47.111.20';
 var udpPort = 50000;
-var bcolor = '#ECFFDC';
-var endVideo = vvideo;
+var bcolor = '#42084e'; //'#ECFFDC';
+var endVideo = tvideo;
+var endFailVideo = tvideof;
+var vonito = 'https://neru-ef3346a6-debug-vonito.use1.runtime.vonage.cloud';
 const filex = require('../images/redx2.gif');
 const fileq = require('../images/qmark.png');
 const filec = require('../images/greencheck1.gif');
@@ -64,63 +121,20 @@ const filee = require('../images/exclamation.png');
 const filel = require('../images/loading.gif');
 var deviceId;
 var myLoc;
+var gcallto = 30;
 var bedrock =
   'Warning!\n\nBack-end AI processing indicates fraud pattern; this transaction halted.';
 getUniqueId().then(id => {
   deviceId = id;
   console.log('Initialized deviceId: ', deviceId);
 });
-
+var sessionId = '';
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
-const Header = ({onData}): Node => {
-  const isDarkMode = false; // useColorScheme() === 'dark';
-  return (
-    <ImageBackground
-      accessibilityRole="image"
-      testID="new-app-screen-header"
-      source={require('../images/vonage_logo.png')}
-      style={[
-        styles.background,
-        {
-          backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-        },
-      ]}
-      imageStyle={styles.logo}>
-      <Text
-        style={[
-          styles.text,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        The Vonage
-        {'\n'}
-        Vault
-      </Text>
-      <Text
-        onPress={(e) => {
-          e.preventDefault();
-          console.log("Splashing?")
-          onData(true)}}
-        style={[
-          styles.ver,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-            textDecorationLine: 'underline',
-            fontWeight: 'bold',
-          },
-        ]}>
-        v{ver}
-      </Text>
-    </ImageBackground>
-  );
-};
-
 function Section({children, title}: SectionProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   return (
@@ -137,10 +151,30 @@ function Section({children, title}: SectionProps): React.JSX.Element {
     </View>
   );
 }
+function hello() {
+  console.log('Playing hello sound from ', Sound.MAIN_BUNDLE);
+  const sound = new Sound('hablame.wav', Sound.MAIN_BUNDLE, error => {
+    if (error) {
+      console.log('failed to load the sound', error);
+      return;
+    }
+    // Enable the speakerphone
+    sound.setSpeakerphoneOn(true); // pass true or false
+    sound.play(success => {
+      if (success) {
+        console.log('successfully finished playing');
+      } else {
+        console.log('playback failed due to audio decoding errors');
+      }
+    });
+  });
+}
+
 function MainScreen(): React.JSX.Element {
   const isDarkMode = false; //useColorScheme() === 'dark';
   const doDebug = async inp => {
-    console.log('Inp: ', inp);
+    //console.log('Inp: ', inp);
+    return; // Comment out to enable debug server
     let body = inp;
     body.product = 'vault';
     if (typeof inp === 'string') {
@@ -149,7 +183,7 @@ function MainScreen(): React.JSX.Element {
     }
     body.version = '' + ver;
     body.phone = '' + gPhone;
-    console.log('Debug: ', body);
+    //console.log('Debug: ', body);
     try {
       fetch('https://vids.vonage.com/vfraud/debugNV', {
         method: 'POST',
@@ -163,9 +197,38 @@ function MainScreen(): React.JSX.Element {
     }
   };
   const backgroundStyle = {
-    backgroundColor: showVideo ? 'lightgreen' : Colors.lighter,
+    backgroundColor: showVideo ? '#42084e' : Colors.lighter,
     //    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter, lightgreen
   };
+  const Header = ({onData}): Node => {
+    const isDarkMode = false; // useColorScheme() === 'dark';
+    return (
+      <View>
+        <Text
+          style={[
+            styles.text,
+            {
+              marginTop: 40,
+              color: Colors.white,
+            },
+          ]}>
+          {t('Trusted Bank')}
+        </Text>
+        <Image
+          style={{width: 150, height: 150, marginLeft: 20, marginTop: 20}}
+          source={
+            skin === 'vault'
+              ? require('../images/vonage_logo.png')
+              : require('../images/TBLogo-B.png')
+          }></Image>
+      </View>
+    );
+  };
+  const videoPlayerRef = useRef(null);
+  const failVideoPlayerRef = useRef(null);
+  const demoRef = useRef(false);
+  const cognito = useRef(true);
+
   const [checked, setChecked] = useState<boolean>(false);
   const [isPhoneNumberValidState, setIsPhoneNumberValidState] = useState(false);
   const [inputNumber, setInputNumber] = useState(null);
@@ -173,8 +236,8 @@ function MainScreen(): React.JSX.Element {
   const [inProcess, setInProcess] = useState(false);
   const [facial, setFacial] = useState(false);
   const [settings, setSettings] = useState(false);
-  const [fast, setFast] = useState(false);
-  const [demo, setDemo] = useState(false);
+  const [pendingSettings, setPendingSettings] = useState(false);
+  const [fast, setFast] = useState(true);
   const [sandbox, setSandbox] = useState(false);
   const [popup, setPopup] = useState(false);
   const [state, alterState] = useState(null);
@@ -185,12 +248,50 @@ function MainScreen(): React.JSX.Element {
   const [warning, setWarning] = useState(false);
   const [splash, setSplash] = useState(false);
   const [light, setLight] = useState(true);
+  const [skin, setSkin] = useState('vault');
+  const [cbutton, setCbutton] = useState(t('Call Trusted Bank'));
+  const [inCall, setInCall] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [startsplash, setStartSplash] = useState(false);
+  const [failure, setFailure] = useState(false);
+  const [front, setFront] = useState(true);
+  const [deeper, setDeeper] = useState(false);
+  const [inferMessage, setInferMessage] = useState<string | null>(null);
+  const [inferRisk, setInferRisk] = useState<
+    'CRITICAL' | 'HIGH' | 'MEDIUM' | null
+  >(null);
+  const inferTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lang, setLang] = useState(glang);
+  const [translation, setTranslation] = useState(translations[glang]);
+  const [paused, setPaused] = useState(true);
+  const [muted, setMuted] = useState(false);
+  const [isGood, setIsGood] = useState(true);
+  const [isSpeaker, setIsSpeaker] = useState(false);
+
+  const dismissInferMessage = () => {
+    if (inferTimer.current !== null) {
+      clearTimeout(inferTimer.current);
+      inferTimer.current = null;
+    }
+    setInferMessage(null);
+  };
+
+  useEffect(
+    () => () => {
+      if (inferTimer.current !== null) {
+        clearTimeout(inferTimer.current);
+      }
+    },
+    [],
+  );
+
+  console.log('Render with state: ', state, 'failure: ', failure);
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 265;
 
   const onTouchStart = e => {
-//    e.preventDefault();
+    //    e.preventDefault();
     console.log(
       'start: ',
       e.nativeEvent.locationX,
@@ -221,20 +322,40 @@ function MainScreen(): React.JSX.Element {
     console.log('stopFacial, state: ', state);
     onMessage('cancelled:0:55');
   };
+  function t(phrase) {
+    return tt[phrase] ?? phrase;
+  }
 
   async function startup() {
-    const resp = await fetch(`https://vids.vonage.com/vfraud/redirector`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({phone: '' + gPhone, product: 'vault'}),
+    await AsyncStorage.getItem('@skin').then(value => {
+      console.log('Retrieved previous skin: ', value);
+      setSkin(value);
+      if (value === 'bank') {
+        endVideo = tvideo;
+      }
     });
+
+    const resp = await fetch(
+      `https://neru-ef3346a6-vmcp-vmcp.use1.runtime.vonage.cloud/redirector`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({phone: '' + gPhone, product: 'vault'}),
+      },
+    );
     var data = await resp.json();
-    console.log('Response from Initial Redirector: ', data);
+    console.log('Response from Initial Redirector: ', data.baseUrl);
     if (data.baseUrl) {
-      vUrl = data.baseUrl;
+      ////////////////////////// Note: uncomment for RELEASE version!!!!
+      if (!DEBUG) {
+        vUrl = data.baseUrl;
+      }
       AsyncStorage.setItem('@vUrl', vUrl);
+      if (data.vonito) {
+        vonito = data.vonito;
+      }
     }
     if (data.udp) {
       udpUrl = data.udp;
@@ -244,13 +365,39 @@ function MainScreen(): React.JSX.Element {
       udpPort = data.udpport;
       AsyncStorage.setItem('@udpPort', udpPort);
     }
+    if (data.skin) {
+      setSkin(data.skin);
+      if (data.skin === 'bank') {
+        endVideo = tvideo;
+      }
+      AsyncStorage.setItem('@skin', data.skin);
+      console.log('Setting retrieved skin: ', data.skin);
+    }
+    if (data.prompt) {
+      gcallto = data.prompt;
+      AsyncStorage.setItem('@callto', gcallto);
+    }
+    if (data.languages) {
+      languages = data.languages;
+    }
+    if (data.translations) {
+      console.log('Got external translations!', lang, data.translations);
+      var mergedConfig = merge(translations, data.translations);
+      translations = mergedConfig;
+      tt = translations[glang];
+      console.log('Example Done: ', glang, translations.es.Done);
+      setTranslation(translations[glang]);
+      setCbutton(
+        translations[glang]['Call Trusted Bank'] ?? 'Call Trusted Bank',
+      );
+    }
   }
   function updateStatus(index, results, desc = '') {
     var status = -1;
     var file = fileq;
     var description = desc;
     if (!description.length) description = results;
-    console.log('Setting results ', results);
+    console.log('Setting results ', results, index);
     if (results == 'allow') {
       status = 1;
       file = filec;
@@ -272,6 +419,14 @@ function MainScreen(): React.JSX.Element {
       status = -1;
       file = fileq;
     }
+    var obj = tasks[index];
+    obj.results = results;
+    obj.desc = description;
+    obj.status = status;
+    obj.deviceId = deviceId;
+    obj.phone = '' + gPhone;
+    obj.sessionId = sessionId;
+    sendResults(obj);
     const newTasks = tasks.map((c, i) => {
       if (i === index) {
         c.status = status;
@@ -294,42 +449,106 @@ function MainScreen(): React.JSX.Element {
       body: JSON.stringify({code: code, reqId: reqId}),
     });
   }
-  async function getFd(index) {
+  async function sendResults(obj) {
+    const resp = fetch(vUrl + '/stepResults', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(obj),
+    });
+  }
+  async function doCall(jwt, callto) {
+    if (LOCAL) return;
+    console.log('In doCall with ', jwt, callto);
+    if (!isConnected) {
+      await ClientManager.login(jwt);
+    } else {
+      if (!inCall) {
+        console.log('ClientManager.makeCall(): ', gcallto);
+        //ClientManager.setCommunicationDevices();
+        const callId = ClientManager.makeCall(gcallto);
+        setMuted(false);
+        setIsSpeaker(false);
+        console.log('CallId 2: ', callId);
+        //playVideo();
+        updateStatus(0, 'allow', t('In Call'));
+      }
+    }
+  }
+  async function getStep(index) {
+    let body = {
+      phone: '' + gPhone,
+      product: 'vault',
+      id: deviceId,
+      sandbox: sandbox,
+      demo: demoRef.current,
+    };
     if (index == null || !tasks[index].active) {
       console.log('Not using ', index);
       updateStatus(index, 'unused', 'Unused');
       return;
     }
     var data;
-    console.log('in getFd for index ', index, demo);
+    console.log('in getStep for index ', index, demoRef.current);
     updateStatus(index, 'checking');
 
-    let body = {
-      phone: '' + gPhone,
-      product: 'vault',
-      id: deviceId,
-      sandbox: sandbox,
-      demo: demo,
-    };
-    if (tasks[index].tag == 'location') {
+    if (index == 0 || tasks[index].tag == 'location') {
       console.log('Adding location to request body: ', myLoc);
       body.location = myLoc;
+      var methods = [];
+      if (!index) {
+        tasks.map(task => {
+          if (task.id && task.active) {
+            methods.push(task.name.replace('\n', ' '));
+          }
+        });
+        body.methods = methods;
+        body.lang = lang;
+      }
     }
-    if (!demo) {
+    if (!demoRef.current || tasks[index].tag == 'ai') {
       if (sandbox && tasks[index].tag == 'nv') {
         body.phone = '990' + gPhone.substring(gPhone.length - 10);
       }
-      const resp = await fetch(vUrl + tasks[index].url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      console.log('resp back in getFd index ', index);
-      data = await resp.json();
-      console.log('Response from getFd: ', data);
+      if (tasks[index].tag == 'nv')
+        console.log(
+          'Will I be forcing failure for Silent Auth? : ',
+          failure,
+          gFailure,
+          tasks[index].tag,
+        );
+      if (gFailure && tasks[index].tag == 'nv') {
+        await sleep(delay);
+        updateStatus(index, 'block', 'Unable to verify');
+        return;
+      } else {
+        const resp = await fetch(vUrl + tasks[index].url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+        console.log('resp back in getStep index ', index);
+        data = await resp.json();
+      }
+      console.log('Response from getStep: ', data);
+      if (data.jwt) {
+        console.log('Making call with JWT and callto: ', gcallto);
+        // This is for the AI Phone Call Assistant, data.jwt and data.callto were returned
+        //        gcallto = data.callto;
+        if (!channel) {
+          console.log('No channel yet, initializing Pusher');
+          await initPusher(data.pkey);
+        }
+        console.log('Updating call status: ', index, 'allow', 'Calling');
+        updateStatus(index, 'allow', 'Calling');
+        var callid = await doCall(data.jwt, gcallto);
+        return;
+      }
       if (data.redirect) {
+        // This is for Silent Auth
         var reqId = data.reqid;
         console.log('Ok, doing redirection to ', data.redirect);
         try {
@@ -339,7 +558,7 @@ function MainScreen(): React.JSX.Element {
               true,
             );
           const openCheckResponse = JSON.parse(jopenCheckResponse);
-          console.log('Redirect response: ', openCheckResponse);
+          //console.log('Redirect response: ', openCheckResponse);
           doDebug({type: 'checkResponse', checkResponse: openCheckResponse});
           if (openCheckResponse.http_status > 299) {
             updateStatus(index, 'block', 'Invalid number');
@@ -373,8 +592,21 @@ function MainScreen(): React.JSX.Element {
       // Demo mode
       await sleep(delay);
       console.log('Demo mode for ', index);
-      updateStatus(index, 'allow');
+      if (gFailure && tasks[index].tag == 'nv') {
+        await sleep(delay);
+        updateStatus(index, 'block', 'Unable to verify');
+        return;
+      }
+      updateStatus(index, 'allow', 'allow');
     }
+  }
+  function playVideo() {
+    setStartSplash(true);
+    /*
+    setTimeout(() => {
+      setStartSplash(false);
+    }, 8200);
+    */
   }
   async function getNumber() {
     await AsyncStorage.getItem('@phone').then(myPhone => {
@@ -408,7 +640,57 @@ function MainScreen(): React.JSX.Element {
       return !prev;
     });
   };
+  async function initPusher(key) {
+    console.log('Initializing Pusher for deviceId: ', deviceId);
+    await pusher.init({
+      apiKey: key,
+      cluster: 'us3',
+    });
+    channel = await pusher.subscribe({
+      channelName: 'vault-' + deviceId,
+      onEvent: event => {
+        console.log('raw event data: ', event);
+        const data = JSON.parse(event.data);
+        //var data = event.data;
+        console.log(`Got channel event data:`, data);
+        if (data) {
+          console.log('event data sessionId: ', data.sessionId, data.uuid);
+          sessionId = data.sessionId;
+          console.log('Got sessionId: ', sessionId);
+        }
+        if (data.action == 'authenticate') {
+          //event.eventName ===
+          console.log('Got authenticate event, starting looper ');
+          looper();
+        }
+        if (data.type == 'infer') {
+          console.log('Got infer event, notify user: ', data.trigger);
+          const message = data.message ?? data.trigger;
+          if (message !== undefined && message !== null) {
+            if (inferTimer.current !== null) {
+              clearTimeout(inferTimer.current);
+            }
+            setInferRisk(
+              data.risk === 'CRITICAL' ||
+                data.risk === 'HIGH' ||
+                data.risk === 'MEDIUM'
+                ? data.risk
+                : null,
+            );
+            setInferMessage(String(message));
+            inferTimer.current = setTimeout(() => {
+              setInferMessage(null);
+              inferTimer.current = null;
+            }, 5000);
+          }
+        }
+      },
+    });
+    await pusher.connect();
+    console.log('Done setting up pusher');
+  }
   var defaultTasks = [
+    /*
     {
       id: 0,
       tag: 'fd',
@@ -424,6 +706,7 @@ function MainScreen(): React.JSX.Element {
       url: '/getFd',
       icon: fileq,
     },
+    */
     /*
     {
       id: 1,
@@ -438,6 +721,20 @@ function MainScreen(): React.JSX.Element {
       url: '/getFraud',
     },
     */
+    {
+      id: 0,
+      tag: 'ai',
+      name: 'AI\nAssistant',
+      desc: '',
+      tech: 'Vonage API',
+      prompt: 'Call the Vault AI Assistant',
+      active: true,
+      live: true,
+      status: '-1',
+      results: '',
+      url: '/getAi',
+      icon: fileq,
+    },
     {
       id: 1,
       tag: 'simswap',
@@ -455,7 +752,7 @@ function MainScreen(): React.JSX.Element {
     {
       id: 2,
       tag: 'nv',
-      name: 'Number\nVerification',
+      name: 'Silent\nAuthentication',
       desc: '',
       tech: 'Network API',
       prompt: 'Silently verifying that this phone is the number expected',
@@ -482,18 +779,34 @@ function MainScreen(): React.JSX.Element {
     },
     {
       id: 4,
+      tag: 'fd',
+      name: 'Fraud\nDefender',
+      desc: '',
+      tech: 'Vonage API',
+      prompt: 'Using Vonage Fraud APIs to check for likely fraudulent numbers',
+      active: true,
+      live: true,
+      status: '-1',
+      results: '',
+      url: '/getFd',
+      icon: fileq,
+    },
+
+    /*    {
+      id: 4,
       tag: 'facial',
       name: 'Facial\nLiveness',
       desc: '',
       tech: 'Amazon API',
       prompt: 'Checking ‘Facial Liveness’ to prevent pictures or AI bots',
-      active: true,
+      active: false,
       live: true,
       status: '-1',
       results: '',
       url: '/getFacial',
       icon: fileq,
     },
+*/
   ];
   var copyTasks = [...defaultTasks];
   const [tasks, setTasks] = useState(copyTasks);
@@ -501,21 +814,43 @@ function MainScreen(): React.JSX.Element {
     async function fetchSettings() {
       var val;
       val = await AsyncStorage.getItem('fast');
-      if (val == 'true') {
+      if (1 || val == 'true') {
         // Default is false, so only change if we read true
         setFast(true);
       }
       val = await AsyncStorage.getItem('demo');
       if (val == 'true') {
-        setDemo(true);
+        demoRef.current = true;
       }
       val = await AsyncStorage.getItem('sandbox');
       if (val === 'true') {
         setSandbox(true);
       }
+      val = await AsyncStorage.getItem('failure');
+      if (val === 'true') {
+        setFailure(true);
+        console.log('Initial setting of failure to true from async storage');
+        gFailure = true;
+      }
       val = await AsyncStorage.getItem('light');
       if (val === 'false') {
         setLight(false);
+      }
+      val = await AsyncStorage.getItem('lang');
+      if (val) {
+        console.log('Got lang: ', val, val in translations);
+        setLang(val);
+        glang = val;
+        if (val in translations) {
+          console.log('Setting translation to ', val);
+          setTranslation(translations[val]);
+          tt = translations[glang];
+          setCbutton(
+            translations[val]['Call Trusted Bank'] ?? 'Call Trusted Bank',
+          );
+        }
+      } else {
+        console.log('No stored lang, use: ', lang);
       }
       tasks.map(async task => {
         val = await AsyncStorage.getItem(task.tag);
@@ -538,6 +873,53 @@ function MainScreen(): React.JSX.Element {
       }
     }
     fetchSettings();
+    console.log('componentDidMount requesting permissions');
+    if (Platform.OS === 'ios') {
+      request(PERMISSIONS.IOS.MICROPHONE);
+    } else if (Platform.OS === 'android') {
+      requestMultiple([
+        PERMISSIONS.ANDROID.RECORD_AUDIO,
+        PERMISSIONS.ANDROID.READ_PHONE_STATE,
+      ]);
+    }
+    eventEmitter.addListener('onStatusChange', async data => {
+      console.log('Got status change event: ', data);
+      const status = data.status;
+      console.log('Got status change: ', status);
+      //this.setState({status: status});
+
+      if (status === 'connected' || status === 'Connected') {
+        setIsConnected(true);
+        if (!LOCAL && !inCall) {
+          const callId = ClientManager.makeCall(gcallto);
+          console.log('CallId: ', callId);
+          setMuted(false);
+          setIsSpeaker(false);
+          //playVideo();
+          updateStatus(0, 'allow', t('In Call'));
+        }
+
+        //this.setState({button: 'Call'});
+        //this.setState({callAction: () => ClientManager.makeCall(number)});
+      }
+    });
+    eventEmitter.addListener('onCallStateChange', data => {
+      const state = data.state;
+      console.log('Got state change: ', state);
+      if (state == 'On Call') {
+        var txt = t('End Call');
+        console.log('Setting inCall to true, ', txt);
+        setInCall(true);
+        setCbutton(txt);
+      } else if (state == 'Idle') {
+        var txt = t('Call Trusted Bank');
+        console.log('Setting inCall to false', txt);
+        setInCall(false);
+        setCbutton(txt);
+        setIsConnected(false); //MSB
+      }
+    });
+    setCbutton(t('Call Trusted Bank'));
   }, []);
   useEffect(() => {
     console.log('In useEffect for number stuff: ', inputNumber, countryCode);
@@ -564,10 +946,44 @@ function MainScreen(): React.JSX.Element {
     setInProcess(false);
     setFacial(false);
     //bcolor ='rgba( 255, 0, 0, 0.4)'; // Failure
-    bcolor = '#ECFFDC'; // Good
+    bcolor = '#42084e'; //'#ECFFDC'; // Good
+    var good = true;
+    tasks.map(task => {
+      console.log('Task results: ', task.name, task.results, task.active);
+      if (task.active && task.results != 'allow') {
+        good = false;
+      }
+    });
+
+    setPaused(true);
+    setIsGood(good);
+
     setShowVideo(true);
+    console.log('About to restart video');
+    restartVideo();
     console.log('Show Video set to true');
+    var obj = {};
+    obj.name = 'Verification';
+    obj.results = good ? 'allow' : 'block';
+    obj.desc = 'Verified';
+    obj.status = '1';
+    obj.deviceId = deviceId;
+    obj.phone = '' + gPhone;
+    obj.sessionId = sessionId;
+    sendResults(obj);
   }, [done]);
+  const restartVideo = () => {
+    console.log('Restarting video: ', videoPlayerRef);
+    if (videoPlayerRef.current) {
+      videoPlayerRef.current.seek(0); // Seek to the beginning (0 seconds)
+    }
+    if (failVideoPlayerRef.current) {
+      failVideoPlayerRef.current.seek(0); // Seek to the beginning (0 seconds)
+    }
+
+    setPaused(false); // Start playing after seeking
+    console.log('Set pause to false');
+  };
 
   useEffect(() => {
     console.log('useEffect for state: ', state, tasks.length);
@@ -581,7 +997,7 @@ function MainScreen(): React.JSX.Element {
       return;
     }
     async function fetchData(state) {
-      await getFd(state);
+      await getStep(state);
     }
     if (!preFacial) {
       showDialog();
@@ -599,11 +1015,19 @@ function MainScreen(): React.JSX.Element {
   }, [state]);
   const saveSettings = () => {
     setSettings(false);
+    setTimeout(() => {
+      setFront(true);
+    }, 300);
     console.log('Writing settings to storage: ');
     AsyncStorage.setItem('fast', '' + fast);
-    AsyncStorage.setItem('demo', '' + demo);
+    AsyncStorage.setItem('demo', '' + demoRef.current);
     AsyncStorage.setItem('sandbox', '' + sandbox);
     AsyncStorage.setItem('light', '' + light);
+    AsyncStorage.setItem('failure', '' + failure);
+    AsyncStorage.setItem('lang', '' + lang);
+    setFailure(failure);
+    gFailure = failure;
+    AsyncStorage.setItem('sandbox', '' + sandbox);
     tasks.map(task => {
       console.log('Setting: ', task.tag, task.active);
       AsyncStorage.setItem(task.tag, '' + task.active);
@@ -611,8 +1035,8 @@ function MainScreen(): React.JSX.Element {
   };
 
   const sendUDP = async () => {
-    if(!light) {
-      console.log("Not lighting the light...")
+    if (!light) {
+      console.log('Not lighting the light...');
       return;
     }
     console.log('Creating UDP socket, sending to ', udpUrl, udpPort);
@@ -642,19 +1066,14 @@ function MainScreen(): React.JSX.Element {
       return;
     }
     console.log('Not null');
-    var name = tasks[state].name.replace(/\n/g, ' ');
     setPopup(true);
     console.log('DoneshowDialog for ', state);
   };
-  const loginHandler = async () => {
-    console.log('Pressed the button');
-    reset();
-    setInProcess(true);
-    console.log('After Dialog');
+  const looper = async () => {
     var skip = false;
     if (fast) {
       console.log('Starting fast loop');
-      for (let step = 0; step < tasks.length; step++) {
+      for (let step = 1; step < tasks.length; step++) {
         console.log('Loop value: ', step);
         if (tasks[step].tag == 'facial') {
           if (tasks[step].active) {
@@ -667,7 +1086,7 @@ function MainScreen(): React.JSX.Element {
             setInProcess(false);
           }
         } else {
-          await getFd(step);
+          await getStep(step);
         }
       }
       if (!skip) {
@@ -678,6 +1097,136 @@ function MainScreen(): React.JSX.Element {
       console.log('Altering state: ', state, tasks.length);
       var v = 0;
       alterState(v);
+    }
+  };
+  const goDeeper = async () => {
+    if (inCall) {
+      console.log('In call, not going deeper');
+      return;
+    }
+    console.log('Going deeper!');
+    setDeeper(true);
+    loginHandler();
+    var timer = 4000;
+    if (!tasks[0].active) {
+      setDeeper(false);
+      setFront(false);
+    } else {
+      setTimeout(() => {
+        setDeeper(false);
+        setFront(false);
+      }, timer);
+    }
+  };
+  const doCognito = async () => {
+    console.log('Starting cognito check');
+    setDeeper(false);
+    setFront(false);
+    var index = 2;
+    var data;
+    try {
+      const resp = await fetch(`${vonito}/verifyInit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({phone: '' + gPhone, deviceId: deviceId}),
+      });
+      data = await resp.json();
+      console.log('Response from Cognito initial query: ', data);
+    } catch (err) {
+      console.log('Cognito init error: ', err);
+      return;
+    }
+    var code = '1234';
+    try {
+      if (data.redirectUrl) {
+        console.log('Calling over cellular: ', data.redirectUrl);
+        const jopenCheckResponse =
+          await VonageVerifySilentAuthModule.openWithDataCellular(
+            data.redirectUrl,
+            true,
+          );
+        const openCheckResponse = JSON.parse(jopenCheckResponse);
+        console.log('Redirect response: ', openCheckResponse);
+        doDebug({
+          type: 'checkResponse',
+          checkResponse: openCheckResponse,
+        });
+        if (openCheckResponse.http_status > 299) {
+          updateStatus(index, 'block', 'Invalid number');
+        } else if (openCheckResponse.response_body?.code) {
+          // Must be SA
+          updateStatus(index, 'allow', 'Number verified');
+          code = openCheckResponse.response_body?.code;
+        }
+      }
+    } catch (err) {
+      console.log('Cognito cellular verification error: ', err);
+    }
+    try {
+      const resp2 = await fetch(`${vonito}/verifyResults`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: '' + gPhone,
+          deviceId: deviceId,
+          code: '' + code,
+        }),
+      });
+      var data2 = await resp2.json();
+      console.log('Response from Cognito verify results: ', data2);
+    } catch (err) {
+      console.log('Cognito Verify response error: ', err);
+    }
+  };
+  const loginHandler = async () => {
+    console.log('Pressed the button');
+    /*    if (front && !inCall) {
+      console.log('Turning off front splash');
+      setTimeout(() => {
+        setFront(false);
+      }, 1000);
+    }
+*/
+    if (inCall) {
+      console.log('In call, so hang up');
+      setInCall(false);
+      ClientManager.endCall();
+      updateStatus(0, 'allow', 'Call Ended');
+      setStartSplash(false);
+      setFront(true);
+      return;
+    }
+    reset();
+    setInProcess(true);
+    console.log('After Dialog');
+
+    if (tasks[0].active) {
+      // Special case for call first
+      await getStep(0);
+    } else {
+      // No AI call, so Send message to get propagated to GUI...
+      console.log('No AI, start web GUI stuff ');
+      var obj = tasks[0];
+      var methods = [];
+      tasks.map(task => {
+        if (task.id && task.active) {
+          methods.push(task.name.replace('\n', ' '));
+        }
+      });
+
+      obj.methods = methods;
+      //      obj.desc = description;
+      //      obj.status = status;
+      obj.deviceId = deviceId;
+      obj.phone = '' + gPhone;
+      obj.sessionId = sessionId;
+
+      sendResults(obj);
+      looper();
     }
   };
   const onMessage = data => {
@@ -706,13 +1255,50 @@ function MainScreen(): React.JSX.Element {
     console.log('About to set done to true');
     setDone(true);
   };
-  const reset = async () => {
+  const doMute = async () => {
+    var callMuted = await ClientManager.isCallMuted();
+    console.log('Before isCallMuted', callMuted);
+    if (callMuted) {
+      ClientManager.setMuted(false);
+      setMuted(false);
+    } else {
+      ClientManager.setMuted(true);
+      setMuted(true);
+    }
+    callMuted = await ClientManager.isCallMuted();
+    console.log('after isCallMuted', callMuted);
+    setTimeout(async () => {
+      callMuted = await ClientManager.isCallMuted();
+      console.log('after DELAYED isCallMuted', callMuted);
+    }, 500);
+  };
+
+  const switchAudioOutput = async () => {
+    var speakerOutput = await ClientManager.isSpeaker();
+    console.log('Before speakerOutput', speakerOutput);
+    if (speakerOutput) {
+      ClientManager.setSpeaker(false);
+      setIsSpeaker(false);
+    } else {
+      ClientManager.setSpeaker(true);
+      setIsSpeaker(true);
+    }
+    speakerOutput = await ClientManager.isSpeaker();
+    console.log('after audio route', speakerOutput);
+    setTimeout(async () => {
+      speakerOutput = await ClientManager.speakerOutput();
+      console.log('after DELAYED speakerOutput', speakerOutput);
+    }, 500);
+  };
+
+  const reset = async (useFront = false) => {
     console.log('Reset!');
     const newTasks = tasks.map((c, i) => {
       c.status = -1;
       c.desc = '';
       return c;
     });
+    setStartSplash(false);
     setTasks(newTasks);
     setShowVideo(false);
     setInProcess(false);
@@ -722,11 +1308,23 @@ function MainScreen(): React.JSX.Element {
     setWarning(false);
     preFacial = false;
     alterState(null);
+    setSettings(false);
+    if (useFront) {
+      setTimeout(() => {
+        setFront(true);
+      }, 300);
+    }
+    //setFront(true);
 
     //await AsyncStorage.clear();
   };
+  /*
+  <ImageBackground
+      source={require('../images/TBackground.png')}
+      style={[styles.front, {opacity: 1.0, width: '100%', height: '100%'}]}>
+*/
   return (
-    <SafeAreaView style={backgroundStyle}>
+    <SafeAreaView style={[backgroundStyle, {}]}>
       {true && (
         <StatusBar
           barStyle={isDarkMode ? 'light-content' : 'dark-content'}
@@ -735,344 +1333,636 @@ function MainScreen(): React.JSX.Element {
       )}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{flexGrow: 1}}
         style={[
-          {backgroundColor: showVideo ? bcolor : Colors.lighter}, //#ECFFDC
+          {backgroundColor: showVideo ? bcolor : '#42084e'}, //'#DFC5FE'},
           {height: '100%'},
         ]}>
-        {facial && (
-          <View>
-            <Modal isVisible={facial}>
-              <Button title="Cancel Liveness Check" onPress={stopFacial} />
-              <WebView
-                allowsInlineMediaPlayback={true}
-                style={{height: 100}}
-                source={{uri: faceUrl}}
-                onMessage={onMessage}
-              />
-            </Modal>
-          </View>
-        )}
-        {warning && (
-          <View
-            onTouchStart={() => {
-              setWarning(false);
-            }}>
-            <Modal
-              style={[styles.settings, {backgroundColor: 'red'}]}
-              isVisible={warning}>
-              <Video
-                source={rvideo}
-                paused={false}
-                style={[styles.video, {top: -40}]}
-                repeat={false}
-              />
-              <Text
-                style={[
-                  styles.text,
-                  {
-                    color: 'white',
-                  },
-                ]}>
-                {bedrock}
-              </Text>
-              <Image
-                source={bedimage}
-                style={[
-                  styles.video,
-                  {width: 200, height: 180, marginTop: 20},
-                ]}></Image>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  {
-                    color: 'yellow',
-                    marginTop: 70,
-                  },
-                ]}>
-                Touch anywhere to dismiss
-              </Text>
-            </Modal>
-          </View>
-        )}
-        {splash && (
-          <View
-            onTouchStart={() => {
-              setSplash(false);
-            }}>
-            <Modal
-              style={[styles.settings, {backgroundColor: 'white'}]}
-              isVisible={splash}>
-              <Image
-                source={require('../images/VonagePOE_Primary.png')}
-                style={[
-                  {width: 240, height: 80, marginTop: -120, marginLeft: -150},
-                ]}></Image>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  {
-                    color: 'darkblue',
-                    marginTop: 20,
-                  },
-                ]}>
-                Built with our partners
-              </Text>
-              <Image
-                source={require('../images/tef.png')}
-                style={[
-                  styles.video,
-                  {width: 340, height: 80, marginTop: 40},
-                ]}></Image>
-              <Image
-                source={require('../images/aduna2.png')}
-                style={[
-                  styles.video,
-                  {width: 300,height: 100, marginTop: 20},
-                ]}></Image>
-              <Image
-                source={require('../images/awspartner.png')}
-                style={[
-                  styles.video,
-                  {width: 200, height: 150, marginTop: 20},
-                ]}></Image>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  {
-                    color: 'darkblue',
-                    marginTop: 70,
-                  },
-                ]}>
-                Touch anywhere to dismiss
-              </Text>
-            </Modal>
-          </View>
-        )}
-        {popup && (
-          <View>
-            <Modal
-              style={[styles.settings]}
-              transparent={false}
-              isVisible={popup}>
-              <View style={styles.container}>
-              <Text
-                  style={[
-                    styles.techtext,
-                  ]}>
-                  {tasks[state].tech}
-                </Text>
+        <ImageBackground
+          source={require('../images/TBackground.png')}
+          style={[
+            //styles.front,
+            {flex: 1, width: '100%', height: '100%'},
+          ]}>
+          {facial ? (
+            <View>
+              <Modal isVisible={facial}>
+                <Button title="Cancel Liveness Check" onPress={stopFacial} />
+                <WebView
+                  allowsInlineMediaPlayback={true}
+                  style={{height: 100}}
+                  source={{uri: faceUrl}}
+                  onMessage={onMessage}
+                />
+              </Modal>
+            </View>
+          ) : null}
+          {warning ? (
+            <View
+              onTouchStart={() => {
+                setWarning(false);
+              }}>
+              <Modal
+                style={[styles.settings, {backgroundColor: 'red'}]}
+                isVisible={warning}>
+                <Video
+                  source={TBVaultFail}
+                  paused={false}
+                  style={[styles.video, {top: -40}]}
+                  repeat={false}
+                  muted={true}
+                  disableFocus={true}
+                  disableAudioSessionManagement={true}
+                />
                 <Text
                   style={[
                     styles.text,
                     {
-                      color: isDarkMode ? Colors.white : Colors.black,
+                      color: 'white',
                     },
                   ]}>
-                  {tasks[state].name.replace(/\n/g, ' ')}
+                  {bedrock}
                 </Text>
+                <Image
+                  source={bedimage}
+                  style={[
+                    styles.video,
+                    {width: 200, height: 180, marginTop: 20},
+                  ]}></Image>
                 <Text
                   style={[
-                    styles.subtext,
+                    styles.sectionTitle,
                     {
-                      color: isDarkMode ? Colors.white : Colors.black,
+                      color: 'yellow',
+                      marginTop: 70,
                     },
                   ]}>
-                  {'\n'}
-                  {tasks[state].prompt}
-                  {'\n\n'}
+                  Touch anywhere to dismiss
                 </Text>
-                <Text
-                  style={[
-                    styles.text,
-                    {
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    },
-                  ]}>
-                  Result:
-                  {'\n'}
-                </Text>
-                {tasks[state].status == -4 ? (
-                  <View style={styles.icon}>
-                    <ActivityIndicator color={'blue'} size="large" />
-                  </View>
-                ) : (
-                  <Image source={tasks[state].icon} style={styles.icon}></Image>
-                )}
-                <Text
-                  style={[
-                    styles.text,
-                    {
-                      color: isDarkMode ? Colors.white : Colors.black,
-                    },
-                  ]}>
-                  {tasks[state].desc}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    var final = state + 1;
-                    for (let i = state + 1; i < tasks.length; i++) {
-                      if (tasks[i] && tasks[i].active) {
-                        console.log('Got i: ', i);
-                        final = i;
-                        if (tasks[i].tag == 'facial') {
-                          preFacial = true;
-                        }
-                        break;
-                      } else {
-                        updateStatus(i, 'unused');
-                        console.log('Unusing ', i);
-                      }
-                    }
-                    alterState(final);
-                    setPopup(false);
-                  }}
-                  style={[styles.button, styles.enabledButton]}>
-                  <Text style={styles.buttonText}>Continue</Text>
-                </TouchableOpacity>
-              </View>
-              <View>
-                <TouchableOpacity onPress={reset}>
-                  <Image
+              </Modal>
+            </View>
+          ) : null}
+          {Platform.OS === 'android' && (
+            <View style={{flex: 1}}>
+              <Modal
+                isVisible={deeper}
+                animationOutTiming={1000}
+                animationInTiming={1000}>
+                <View style={styles.rbutton}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setDeeper(false);
+                    }}>
+                    <Text
+                      style={[
+                        styles.buttonText,
+                        {fontSize: 25, textAlign: 'center'},
+                      ]}>
+                      {t('closer')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </Modal>
+            </View>
+          )}
+          {1 && (
+            <View
+              onTouchStart={() => {
+                //setFront(false);
+              }}>
+              <Modal
+                style={[styles.settings, {backgroundColor: 'white', margin: 0}]}
+                transparent={true}
+                hideModalContentWhileAnimating={true}
+                animationOut={'fadeOut'}
+                animationIn={'fadeIn'}
+                animationOutTiming={1000}
+                animationInTiming={1000}
+                isVisible={front && !settings}
+                onModalHide={() => {
+                  if (pendingSettings) {
+                    setSettings(true);
+                    setPendingSettings(false);
+                  }
+                }}>
+                <ImageBackground
+                  source={require('../images/TBackground.png')}
+                  style={styles.front}>
+                  <Text
                     style={[
-                      styles.smallIcon,
-                      {marginRight: 0, marginLeft: '90%'},
-                    ]}
-                    source={require('../images/cancel.png')}></Image>
-                </TouchableOpacity>
-              </View>
-            </Modal>
-          </View>
-        )}
-        {settings && (
-          <View>
-            <Modal
-              style={[styles.settings]}
-              transparent={false}
-              isVisible={settings}>
-              <Text
-                style={[
-                  styles.text,
-                  {
-                    color: isDarkMode ? Colors.white : Colors.black,
-                  },
-                ]}>
-                Settings
-              </Text>
-              <BouncyCheckbox
-                key={-1}
-                size={30}
-                text={'Use Fast Mode'}
-                isChecked={fast}
-                innerIconStyle={{borderWidth: 4}}
-                textStyle={{
-                  textDecorationLine: 'none',
-                  fontSize: 30,
-                }}
-                style={{
-                  width: '90%',
-                  marginTop: 20,
-                  marginLeft: -10,
-                }}
-                onPress={(isChecked: boolean) => {
-                  setFast(isChecked);
-                }}
-              />
-              <BouncyCheckbox
-                key={-2}
-                size={30}
-                text={'Demo Mode'}
-                isChecked={demo}
-                innerIconStyle={{borderWidth: 4}}
-                textStyle={{
-                  textDecorationLine: 'none',
-                  fontSize: 30,
-                }}
-                style={{
-                  width: '90%',
-                  marginTop: 10,
-                  marginLeft: -10,
-                }}
-                onPress={(isChecked: boolean) => {
-                  setDemo(isChecked);
-                  if (isChecked) {
-                    setSandbox(false);
-                  }
-                }}
-              />
-              <BouncyCheckbox
-                key={-3}
-                size={30}
-                text={'Use Playground'}
-                isChecked={sandbox}
-                innerIconStyle={{borderWidth: 4}}
-                textStyle={{
-                  textDecorationLine: 'none',
-                  fontSize: 30,
-                }}
-                style={{
-                  width: '90%',
-                  marginTop: 10,
-                  marginLeft: -10,
-                }}
-                onPress={(isChecked: boolean) => {
-                  setSandbox(isChecked);
-                  if (isChecked) {
-                    setDemo(false);
-                  }
-                }}
-              />
-              <BouncyCheckbox
-                key={-4}
-                size={30}
-                text={'Light the Light'}
-                isChecked={light}
-                innerIconStyle={{borderWidth: 4}}
-                textStyle={{
-                  textDecorationLine: 'none',
-                  fontSize: 30,
-                }}
-                style={{
-                  width: '90%',
-                  marginTop: 10,
-                  marginBottom: 10,
-                  marginLeft: -10,
-                }}
-                onPress={(isChecked: boolean) => {
-                  setLight(isChecked);
-                }}
-              />
-              {tasks.map(task => {
-                var name = task.name.replace(/\n/g, ' ');
-                return (
+                      styles.text,
+                      {
+                        fontSize: 40,
+                        color: 'white',
+                        marginTop: 80,
+                      },
+                    ]}>
+                    {t('Trusted Bank')}
+                  </Text>
+                  <Image
+                    source={require('../images/TBLogo-B.png')}
+                    style={[
+                      styles.logo2,
+                      {
+                        width: 200,
+                        height: 180,
+                        marginTop: 60,
+                        opacity: 1.0,
+                        overflow: 'hidden',
+                      },
+                    ]}></Image>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      {
+                        color: 'white',
+                        marginTop: 50,
+                      },
+                    ]}>
+                    {t('Call to speak to our agent')}
+                  </Text>
+                  {Platform.OS === 'ios' && deeper && (
+                    <View style={[styles.rbutton, styles.absoluteMessage]}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setDeeper(false);
+                        }}>
+                        <Text
+                          style={[
+                            styles.buttonText,
+                            {fontSize: 25, textAlign: 'center'},
+                          ]}>
+                          {t('closer')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {cognito.current ? (
+                    <View style={{marginTop: -120, marginLeft: -80}}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          doCognito();
+                        }}>
+                        <Image
+                          source={require('../images/aws.png')}
+                          style={[
+                            styles.smallIcon,
+                            {
+                              width: 80,
+                              marginTop: 180,
+                              opacity: 1.0,
+                              marginRight: -70,
+                            },
+                          ]}></Image>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                  <View style={{flexDirection: 'row', marginTop: 20}}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        goDeeper();
+                      }}>
+                      <Image
+                        source={require('../images/phone.png')}
+                        style={[
+                          styles.smallIcon,
+                          {
+                            width: 80,
+                            height: 80,
+                            marginTop: 80,
+                            opacity: 1.0,
+                            marginRight: 70,
+                          },
+                        ]}></Image>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setTimeout(() => {
+                          setFront(false);
+                        }, 300);
+                      }}>
+                      <Image
+                        source={require('../images/hangup.png')}
+                        style={[
+                          styles.smallIcon,
+                          {
+                            width: 80,
+                            height: 80,
+                            marginTop: 80,
+                            opacity: 1.0,
+                          },
+                        ]}></Image>
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.absoluteSettings}
+                    onPress={() => {
+                      setTimeout(() => {
+                        setFront(false);
+                        setPendingSettings(true);
+                      }, 300);
+                    }}>
+                    <Image
+                      style={styles.smallIcon} //{[styles.smallIcon, {marginTop: 70, marginLeft: 300}]}
+                      source={require('../images/settingsw.png')}></Image>
+                  </TouchableOpacity>
+                </ImageBackground>
+              </Modal>
+            </View>
+          )}
+          {splash ? (
+            <View
+              onTouchStart={() => {
+                setSplash(false);
+              }}>
+              <Modal
+                style={[styles.settings, {backgroundColor: 'white'}]}
+                isVisible={splash}>
+                <Image
+                  source={require('../images/VonagePOE_Primary.png')}
+                  style={[
+                    {
+                      width: 240,
+                      height: 80,
+                      marginTop: -120,
+                      marginLeft: -150,
+                    },
+                  ]}></Image>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    {
+                      color: 'darkblue',
+                      marginTop: 20,
+                    },
+                  ]}>
+                  Built with our partners
+                </Text>
+                <Image
+                  source={require('../images/tef.png')}
+                  style={[
+                    styles.video,
+                    {width: 340, height: 80, marginTop: 40},
+                  ]}></Image>
+                <Image
+                  source={require('../images/aduna2.png')}
+                  style={[
+                    styles.video,
+                    {width: 300, height: 100, marginTop: 20},
+                  ]}></Image>
+                <Image
+                  source={require('../images/awspartner.png')}
+                  style={[
+                    styles.video,
+                    {width: 200, height: 150, marginTop: 20},
+                  ]}></Image>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    {
+                      color: 'darkblue',
+                      marginTop: 70,
+                    },
+                  ]}>
+                  Touch anywhere to dismiss
+                </Text>
+              </Modal>
+            </View>
+          ) : null}
+          {popup ? (
+            <View>
+              <Modal
+                style={[styles.settings]}
+                transparent={false}
+                isVisible={popup}>
+                <View style={styles.container}>
+                  <Text style={[styles.techtext]}>{tasks[state].tech}</Text>
+                  <Text
+                    style={[
+                      styles.text,
+                      {
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      },
+                    ]}>
+                    {tasks[state].name.replace(/\n/g, ' ')}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.subtext,
+                      {
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      },
+                    ]}>
+                    {'\n'}
+                    {tasks[state].prompt}
+                    {'\n\n'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.text,
+                      {
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      },
+                    ]}>
+                    Result:
+                    {'\n'}
+                  </Text>
+                  {tasks[state].status == -4 ? (
+                    <View style={styles.icon}>
+                      <ActivityIndicator color={'blue'} size="large" />
+                    </View>
+                  ) : (
+                    <Image
+                      source={tasks[state].icon}
+                      style={styles.icon}></Image>
+                  )}
+                  <Text
+                    style={[
+                      styles.text,
+                      {
+                        color: isDarkMode ? Colors.white : Colors.black,
+                      },
+                    ]}>
+                    {tasks[state].desc}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      var final = state + 1;
+                      for (let i = state + 1; i < tasks.length; i++) {
+                        if (tasks[i] && tasks[i].active) {
+                          console.log('Got i: ', i);
+                          final = i;
+                          if (tasks[i].tag == 'facial') {
+                            preFacial = true;
+                          }
+                          break;
+                        } else {
+                          updateStatus(i, 'unused');
+                          console.log('Unusing ', i);
+                        }
+                      }
+                      alterState(final);
+                      setPopup(false);
+                    }}
+                    style={[styles.button, styles.enabledButton]}>
+                    <Text style={styles.buttonText}>Continue</Text>
+                  </TouchableOpacity>
+                </View>
+                <View>
+                  <TouchableOpacity onPress={reset}>
+                    <Image
+                      style={[
+                        styles.smallIcon,
+                        {marginRight: 0, marginLeft: '90%'},
+                      ]}
+                      source={require('../images/cancel.png')}></Image>
+                  </TouchableOpacity>
+                </View>
+              </Modal>
+            </View>
+          ) : null}
+          {settings && !front ? (
+            <View>
+              <Modal
+                style={[styles.settings]}
+                transparent={false}
+                isVisible={settings}>
+                <Text style={[styles.absoluteText, {color: 'black'}]}>
+                  v{ver}
+                </Text>
+                <Text
+                  style={[
+                    styles.text,
+                    {
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    },
+                  ]}>
+                  {t('Settings')}
+                </Text>
+                <View style={{height: 180}}>
+                  {countryCode ? (
+                    <PhoneInput
+                      containerStyle={[styles.phone]}
+                      defaultValue={inputNumber} //defaultNumber}
+                      defaultCode={countryCode} //global.myCountry}
+                      textInputProps={{returnKeyType: 'done'}}
+                      onChangeText={text => {
+                        console.log('onChangeText: ', text);
+                        setInputNumber(text);
+                      }}
+                      onChangeFormattedText={text => {
+                        //console.log("onChangeFormattedText: ", text)
+                        //setInputNumber(text);
+                      }}
+                      onChangeCountry={text => {
+                        setCountryCode(text.cca2);
+                      }}
+                      withDarkTheme
+                      withShadow
+                    />
+                  ) : null}
+                  {lang ? (
+                    <SelectCountry
+                      style={styles.dropdown}
+                      selectedTextStyle={styles.selectedTextStyle}
+                      placeholderStyle={styles.placeholderStyle}
+                      imageStyle={styles.imageStyle}
+                      iconStyle={styles.iconStyle}
+                      maxHeight={500}
+                      value={lang}
+                      data={languages}
+                      valueField="value"
+                      labelField="lable"
+                      placeholder="Language"
+                      searchPlaceholder="Search..."
+                      onChange={e => {
+                        console.log('Setting lang: ', e.value);
+                        setLang(e.value);
+                        glang = e.value;
+                        AsyncStorage.setItem('lang', '' + lang);
+                        if (e.value in translations) {
+                          console.log('Setting translation to ', e.value);
+                          setTranslation(translations[e.value]);
+                          tt = translations[e.value];
+                          setCbutton(
+                            translations[e.value]['Call Trusted Bank'] ??
+                              'Call Trusted Bank',
+                          );
+                        }
+                      }}
+                    />
+                  ) : null}
+                </View>
+                {0 ? (
                   <BouncyCheckbox
-                    key={task.id}
-                    size={25}
-                    text={'Use ' + name}
-                    isChecked={task.active}
+                    key={-1}
+                    size={30}
+                    text={t('Use') + ' ' + t('Fast Mode')}
+                    isChecked={fast}
                     innerIconStyle={{borderWidth: 4}}
                     textStyle={{
                       textDecorationLine: 'none',
-                      fontSize: 25,
+                      fontSize: 30,
                     }}
-                    style={{width: '90%', marginTop: 16, marginLeft: 20}}
+                    style={{
+                      width: '90%',
+                      marginTop: 20,
+                      marginLeft: -10,
+                    }}
                     onPress={(isChecked: boolean) => {
-                      task.active = isChecked;
+                      setFast(isChecked);
                     }}
                   />
-                );
-              })}
-              <View style={{width: 100, marginTop: 30}}>
-                <Button
-                  title="Done"
-                  onPress={() => {
-                    saveSettings();
+                ) : null}
+                <BouncyCheckbox
+                  key={-2}
+                  size={30}
+                  text={t('Demo Mode')}
+                  isChecked={demoRef.current}
+                  innerIconStyle={{borderWidth: 4}}
+                  textStyle={{
+                    textDecorationLine: 'none',
+                    fontSize: 30,
+                  }}
+                  style={{
+                    width: '90%',
+                    marginTop: 10,
+                    marginLeft: -10,
+                  }}
+                  onPress={(isChecked: boolean) => {
+                    demoRef.current = isChecked;
+                    if (isChecked) {
+                      setSandbox(false);
+                    }
                   }}
                 />
-              </View>
-            </Modal>
-          </View>
-        )}
-        {showVideo ? (
+                {
+                  <BouncyCheckbox
+                    key={-3}
+                    size={30}
+                    text={t('Fail Silent Auth')}
+                    isChecked={failure}
+                    innerIconStyle={{borderWidth: 4}}
+                    textStyle={{
+                      textDecorationLine: 'none',
+                      fontSize: 30,
+                    }}
+                    style={{
+                      width: '90%',
+                      marginTop: 10,
+                      marginLeft: -10,
+                    }}
+                    onPress={(isChecked: boolean) => {
+                      console.log('Setting failure in gui to ', isChecked);
+                      setFailure(isChecked);
+                      gFailure = isChecked;
+                    }}
+                  />
+                }
+                {0 ? (
+                  <BouncyCheckbox
+                    key={-4}
+                    size={30}
+                    text={t('Light the Light')}
+                    isChecked={light}
+                    innerIconStyle={{borderWidth: 4}}
+                    textStyle={{
+                      textDecorationLine: 'none',
+                      fontSize: 30,
+                    }}
+                    style={{
+                      width: '90%',
+                      marginTop: 10,
+                      marginBottom: 10,
+                      marginLeft: -10,
+                    }}
+                    onPress={(isChecked: boolean) => {
+                      setLight(isChecked);
+                    }}
+                  />
+                ) : null}
+                {tasks.map(task => {
+                  var tname = t(task.name);
+                  var name = tname.replace(/\n/g, ' ');
+                  return (
+                    <View>
+                      <BouncyCheckbox
+                        key={task.id}
+                        size={25}
+                        text={name}
+                        isChecked={task.active}
+                        innerIconStyle={{borderWidth: 4}}
+                        textStyle={{
+                          textDecorationLine: 'none',
+                          fontSize: 25,
+                        }}
+                        style={{width: '90%', marginTop: 16, marginLeft: 20}}
+                        onPress={(isChecked: boolean) => {
+                          task.active = isChecked;
+                        }}></BouncyCheckbox>
+                    </View>
+                  );
+                })}
+                <View style={{width: 100, marginTop: 30}}>
+                  <Button
+                    title={t('Done')}
+                    onPress={() => {
+                      saveSettings();
+                    }}
+                  />
+                </View>
+              </Modal>
+            </View>
+          ) : null}
+          {startsplash || showVideo || 1 ? (
+            <View
+              style={[
+                styles.container,
+                {
+                  backgroundColor: isDarkMode ? Colors.black : '',
+                  height: showVideo ? '100%' : 0,
+                },
+              ]}>
+              <Video
+                ref={videoPlayerRef}
+                source={endVideo}
+                paused={paused}
+                style={[styles.video, {height: showVideo && isGood ? 228 : 0}]}
+                repeat={false}
+                muted={true}
+                disableFocus={true}
+                disableAudioSessionManagement={true}
+              />
+              <Video
+                ref={failVideoPlayerRef}
+                source={endFailVideo}
+                paused={paused}
+                style={[styles.video, {height: showVideo && !isGood ? 228 : 0}]}
+                repeat={false}
+                muted={true}
+                disableFocus={true}
+                disableAudioSessionManagement={true}
+              />
+            </View>
+          ) : null}
+          {!showVideo && (
+            <View
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+              style={[
+                styles.container,
+                {
+                  backgroundColor: isDarkMode ? Colors.black : '',
+                },
+              ]}>
+              <Header
+                onData={() => {
+                  console.log('Splashing');
+                  setSplash(true);
+                }}
+              />
+            </View>
+          )}
           <View
             style={[
               styles.container,
@@ -1080,115 +1970,147 @@ function MainScreen(): React.JSX.Element {
                 backgroundColor: isDarkMode ? Colors.black : '',
               },
             ]}>
-            <Video
-              source={endVideo}
-              paused={false}
-              style={styles.video}
-              repeat={false}
-            />
+            <TouchableOpacity
+              onPress={loginHandler}
+              style={[
+                styles.button,
+                isPhoneNumberValidState && !inProcess
+                  ? styles.enabledButton
+                  : styles.disabledButton,
+              ]}
+              disabled={!isPhoneNumberValidState}>
+              {skin === 'vault' ? (
+                <Text style={styles.buttonText}>Enter the Vault</Text>
+              ) : (
+                <Text style={styles.buttonText}>{cbutton}</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        ) : (
           <View
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             style={[
-              styles.container,
+              styles.citem,
               {
                 backgroundColor: isDarkMode ? Colors.black : '',
               },
             ]}>
-            <Header
-              onData={() => {
-                console.log('Splashing');
-                setSplash(true);
-              }}
-            />
-            {countryCode && (
-              <PhoneInput
-                containerStyle={styles.phone}
-                defaultValue={inputNumber} //defaultNumber}
-                defaultCode={countryCode} //global.myCountry}
-                textInputProps={{returnKeyType: 'done'}}
-                onChangeText={text => {
-                  console.log('onChangeText: ', text);
-                  setInputNumber(text);
-                }}
-                onChangeFormattedText={text => {
-                  //console.log("onChangeFormattedText: ", text)
-                  //setInputNumber(text);
-                }}
-                onChangeCountry={text => {
-                  setCountryCode(text.cca2);
-                }}
-                withDarkTheme
-                withShadow
-              />
-            )}
+            {tasks.map(task => {
+              //if (task && task.active) console.log('Mapped Task: ', task);
+              if (task && task.active)
+                return (
+                  <Section key={100 + task.id}>
+                    <FraudCheck
+                      value={task.status}
+                      title={t(task.name)}
+                      description={task.id ? t(task.desc) : ''}
+                    />
+                  </Section>
+                );
+            })}
           </View>
-        )}
-        <View
-          style={[
-            styles.container,
-            {
-              backgroundColor: isDarkMode ? Colors.black : '',
-            },
-          ]}>
-          <TouchableOpacity
-            onPress={loginHandler}
+          <View
             style={[
-              styles.button,
-              isPhoneNumberValidState && !inProcess
-                ? styles.enabledButton
-                : styles.disabledButton,
-            ]}
-            disabled={!isPhoneNumberValidState}>
-            <Text style={styles.buttonText}>Enter the Vault</Text>
-          </TouchableOpacity>
-        </View>
-        <View
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          style={[
-            styles.citem,
-            {
-              backgroundColor: isDarkMode ? Colors.black : '',
-            },
-          ]}>
-          {tasks.map(task => {
-            //if (task && task.active) console.log('Mapped Task: ', task);
-            return (
-              <Section key={task.id}>
-                <FraudCheck
-                  value={task.status}
-                  title={task.name}
-                  description={task.desc}
-                />
-              </Section>
-            );
-          })}
-        </View>
-        <View
-          style={[
-            styles.container,
-            styles.buttonContainer,
-            {
-              backgroundColor: isDarkMode ? Colors.black : '',
-            },
-          ]}>
-          <TouchableOpacity onPress={reset}>
-            <Image
-              style={[styles.smallIcon, {width: 40}]}
-              source={require('../images/reset.png')}></Image>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              setSettings(true);
-            }}>
-            <Image
-              style={[styles.smallIcon]}
-              source={require('../images/settings.png')}></Image>
-          </TouchableOpacity>
-        </View>
+              styles.container,
+              styles.buttonContainer,
+              {
+                backgroundColor: isDarkMode ? Colors.black : '',
+              },
+            ]}>
+            {inCall ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity onPress={() => switchAudioOutput()}>
+                    <Image
+                      style={[
+                        styles.smallIcon,
+                        {
+                          height: 50,
+                          width: 50,
+                          marginRight: 60,
+                        },
+                      ]}
+                      source={
+                        isSpeaker
+                          ? require('../images/speaker.png')
+                          : require('../images/mobilephone.png')
+                      }></Image>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => doMute()}>
+                  <Image
+                    style={[
+                      styles.smallIcon,
+                      {
+                        height: 70,
+                        width: 70,
+                        marginRight: 50,
+                      },
+                    ]}
+                    source={
+                      muted
+                        ? require('../images/muted.png')
+                        : require('../images/unmuted.png')
+                    }></Image>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            <TouchableOpacity onPress={() => reset(true)}>
+              <Image
+                style={[styles.smallIcon, {width: 40}]}
+                source={require('../images/resetw.png')}></Image>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setTimeout(() => {
+                  setSettings(true);
+                }, 300);
+              }}>
+              <Image
+                style={[styles.smallIcon]}
+                source={require('../images/settingsw.png')}></Image>
+            </TouchableOpacity>
+          </View>
+          <Modal
+            isVisible={inferMessage !== null}
+            onBackdropPress={dismissInferMessage}
+            animationIn="fadeIn"
+            animationOut="fadeOut"
+            animationInTiming={300}
+            animationOutTiming={300}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={dismissInferMessage}
+              style={[
+                styles.rbutton,
+                {
+                  backgroundColor:
+                    inferRisk === 'CRITICAL' || inferRisk === 'HIGH'
+                      ? 'red'
+                      : inferRisk === 'MEDIUM'
+                      ? 'yellow'
+                      : '#14456e',
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.buttonText,
+                  {
+                    fontSize: 20,
+                    color: inferRisk === 'MEDIUM' ? 'black' : 'white',
+                  },
+                ]}>
+                {'The agent sees:\n'}
+                {inferMessage}
+              </Text>
+            </TouchableOpacity>
+          </Modal>
+        </ImageBackground>
       </ScrollView>
     </SafeAreaView>
   );

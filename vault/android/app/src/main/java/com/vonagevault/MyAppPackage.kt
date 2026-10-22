@@ -14,5 +14,5 @@ class MyAppPackage : ReactPackage {
 
     override fun createNativeModules(
         reactContext: ReactApplicationContext
-    ): MutableList<NativeModule> = listOf(VonageVerifySilentAuthModule(reactContext)).toMutableList()
+    ): MutableList<NativeModule> = listOf(EventEmitter(reactContext),ClientManager(reactContext),VonageVerifySilentAuthModule(reactContext)).toMutableList()
 }
