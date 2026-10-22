@@ -4,13 +4,12 @@
  *
  * @format
  */
-const ver = '2.40';
+const ver = '2.41';
 const DEBUG = false;
 const LOCAL = false;
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 //import {AudioDeviceInfo, AudioManager} from 'react-native-audio-api';
 import type {PropsWithChildren} from 'react';
-const {useRef} = require('react');
 import {
   SafeAreaView,
   ScrollView,
@@ -257,12 +256,34 @@ function MainScreen(): React.JSX.Element {
   const [failure, setFailure] = useState(false);
   const [front, setFront] = useState(true);
   const [deeper, setDeeper] = useState(false);
+  const [inferMessage, setInferMessage] = useState<string | null>(null);
+  const [inferRisk, setInferRisk] = useState<
+    'CRITICAL' | 'HIGH' | 'MEDIUM' | null
+  >(null);
+  const inferTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [lang, setLang] = useState(glang);
   const [translation, setTranslation] = useState(translations[glang]);
   const [paused, setPaused] = useState(true);
   const [muted, setMuted] = useState(false);
   const [isGood, setIsGood] = useState(true);
   const [isSpeaker, setIsSpeaker] = useState(false);
+
+  const dismissInferMessage = () => {
+    if (inferTimer.current !== null) {
+      clearTimeout(inferTimer.current);
+      inferTimer.current = null;
+    }
+    setInferMessage(null);
+  };
+
+  useEffect(
+    () => () => {
+      if (inferTimer.current !== null) {
+        clearTimeout(inferTimer.current);
+      }
+    },
+    [],
+  );
 
   console.log('Render with state: ', state, 'failure: ', failure);
 
@@ -644,6 +665,24 @@ function MainScreen(): React.JSX.Element {
         }
         if (data.type == 'infer') {
           console.log('Got infer event, notify user: ', data.trigger);
+          const message = data.message ?? data.trigger;
+          if (message !== undefined && message !== null) {
+            if (inferTimer.current !== null) {
+              clearTimeout(inferTimer.current);
+            }
+            setInferRisk(
+              data.risk === 'CRITICAL' ||
+                data.risk === 'HIGH' ||
+                data.risk === 'MEDIUM'
+                ? data.risk
+                : null,
+            );
+            setInferMessage(String(message));
+            inferTimer.current = setTimeout(() => {
+              setInferMessage(null);
+              inferTimer.current = null;
+            }, 5000);
+          }
         }
       },
     });
@@ -2037,6 +2076,40 @@ function MainScreen(): React.JSX.Element {
                 source={require('../images/settingsw.png')}></Image>
             </TouchableOpacity>
           </View>
+          <Modal
+            isVisible={inferMessage !== null}
+            onBackdropPress={dismissInferMessage}
+            animationIn="fadeIn"
+            animationOut="fadeOut"
+            animationInTiming={300}
+            animationOutTiming={300}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={dismissInferMessage}
+              style={[
+                styles.rbutton,
+                {
+                  backgroundColor:
+                    inferRisk === 'CRITICAL' || inferRisk === 'HIGH'
+                      ? 'red'
+                      : inferRisk === 'MEDIUM'
+                      ? 'yellow'
+                      : '#14456e',
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.buttonText,
+                  {
+                    fontSize: 20,
+                    color: inferRisk === 'MEDIUM' ? 'black' : 'white',
+                  },
+                ]}>
+                {'The agent sees:\n'}
+                {inferMessage}
+              </Text>
+            </TouchableOpacity>
+          </Modal>
         </ImageBackground>
       </ScrollView>
     </SafeAreaView>
