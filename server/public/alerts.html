@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vault Alerts</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      --surface: rgba(34, 10, 42, 0.88);
+      --text: #fff;
+      --muted: #d7c9dc;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+      background: #42084e;
+      color: var(--text);
+    }
+
+    .screen {
+      display: flex;
+      flex-direction: column;
+      width: min(100%, 480px);
+      height: 100%;
+      height: 100dvh;
+      min-height: 0;
+      overflow: hidden;
+      background-color: #42084e;
+      background-image: url("./images/TBackground.png");
+      background-position: center;
+      background-size: cover;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: max(18px, env(safe-area-inset-top)) 18px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(37, 8, 47, 0.72);
+    }
+
+    .header-copy {
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .connection-status {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .header-phone {
+      display: block;
+      margin-top: 5px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .clear-button,
+    .toggle-button {
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .clear-button {
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+
+    .clear-button:hover,
+    .toggle-button:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    .alert-list {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 14px 12px max(16px, env(safe-area-inset-bottom));
+      overscroll-behavior: contain;
+      scrollbar-color: rgba(255, 255, 255, 0.55) transparent;
+    }
+
+    .empty-state {
+      margin: auto;
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .alert {
+      --risk-color: #b8a8c2;
+      flex: 0 0 auto;
+      padding: 12px;
+      border: 1px solid color-mix(in srgb, var(--risk-color) 75%, white);
+      border-left: 5px solid var(--risk-color);
+      border-radius: 10px;
+      background: var(--surface);
+      box-shadow: 0 5px 16px rgba(0, 0, 0, 0.2);
+      overflow-wrap: anywhere;
+    }
+
+    .alert[data-risk="critical"] {
+      --risk-color: #ff5b65;
+    }
+
+    .alert[data-risk="high"] {
+      --risk-color: #ff9b54;
+    }
+
+    .alert[data-risk="medium"] {
+      --risk-color: #ffd45e;
+    }
+
+    .alert[data-risk="low"] {
+      --risk-color: #78dda2;
+    }
+
+    .alert[data-risk="info"] {
+      --risk-color: #73c9ff;
+    }
+
+    .alert-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .risk-label {
+      color: var(--risk-color);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .toggle-button {
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+
+    .alert-fields {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+    }
+
+    .alert-field {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .alert-field dt {
+      display: inline;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .alert-field dd {
+      display: inline;
+      margin: 0 0 0 5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="screen">
+    <header class="header">
+      <div class="header-copy">
+        <h1>Fraud Alerts</h1>
+        <span class="connection-status" id="connection-status" aria-live="polite">Connecting...</span>
+        <span class="header-phone" id="header-phone" hidden></span>
+      </div>
+      <button class="clear-button" id="clear-alerts" type="button">Clear</button>
+    </header>
+    <main class="alert-list" id="alert-list" aria-live="polite">
+      <p class="empty-state" id="empty-state">Waiting for alerts...</p>
+    </main>
+  </div>
+
+  <script>
+    const alertList = document.getElementById("alert-list");
+    const emptyState = document.getElementById("empty-state");
+    const clearButton = document.getElementById("clear-alerts");
+    const connectionStatus = document.getElementById("connection-status");
+    const headerPhone = document.getElementById("header-phone");
+    let previousTrigger;
+
+    function displayValue(value) {
+      if (value === null || value === undefined) return "";
+      if (typeof value === "object") return JSON.stringify(value);
+      return String(value);
+    }
+
+    function riskCategory(risk) {
+      const normalized = String(risk ?? "").trim().toLowerCase();
+      if (normalized.includes("critical")) return "critical";
+      if (normalized.includes("high")) return "high";
+      if (normalized.includes("medium")) return "medium";
+      if (normalized.includes("low")) return "low";
+      if (normalized.includes("info")) return "info";
+      return "other";
+    }
+
+    function loadPhoneNumberLibrary() {
+      if (window.libphonenumber) return Promise.resolve(window.libphonenumber);
+
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://unpkg.com/libphonenumber-js@1/bundle/libphonenumber-js.min.js";
+        script.onload = () => {
+          if (window.libphonenumber) {
+            resolve(window.libphonenumber);
+          } else {
+            reject(new Error("Phone number library did not initialize."));
+          }
+        };
+        script.onerror = () => reject(new Error("Unable to load phone number library."));
+        document.head.append(script);
+      });
+    }
+
+    async function showPhoneFromUrl() {
+      const phone = new URLSearchParams(window.location.search).get("phone");
+      if (!phone) return;
+
+      const digitsOnlyPhone = phone.replace(/\D/g, "");
+      if (!digitsOnlyPhone) {
+        headerPhone.textContent = `Phone: ${phone}`;
+        headerPhone.hidden = false;
+        return;
+      }
+
+      let displayPhone = digitsOnlyPhone;
+      try {
+        const phoneLibrary = await loadPhoneNumberLibrary();
+        const parsedPhone = phoneLibrary.parsePhoneNumberFromString(`+${digitsOnlyPhone}`);
+        if (parsedPhone) displayPhone = parsedPhone.formatInternational();
+      } catch (error) {
+        console.warn("Unable to normalize phone number for display:", error);
+      }
+
+      headerPhone.textContent = `Phone: ${displayPhone}`;
+      headerPhone.hidden = false;
+    }
+
+    function addAlert(alert) {
+      if (!alert || typeof alert !== "object" || Array.isArray(alert)) {
+        throw new TypeError("An alert must be a JSON object.");
+      }
+
+      if (
+        Object.prototype.hasOwnProperty.call(alert, "interrupted") ||
+        Object.prototype.hasOwnProperty.call(alert, "stop_reason")
+      ) {
+        return;
+      }
+
+      if (
+        alert.trigger !== undefined &&
+        alert.trigger === previousTrigger
+      ) {
+        return;
+      }
+      if (alert.trigger !== undefined) previousTrigger = alert.trigger;
+
+      for (const existing of alertList.querySelectorAll(".alert")) {
+        existing.dataset.expanded = "false";
+        existing.querySelector(".toggle-button").textContent = "Show all fields";
+        renderFields(existing);
+      }
+
+      const entry = document.createElement("article");
+      entry.className = "alert";
+      entry.dataset.risk = riskCategory(alert.RISK ?? alert.risk);
+      entry.dataset.expanded = "true";
+
+      const heading = document.createElement("div");
+      heading.className = "alert-heading";
+
+      const riskLabel = document.createElement("span");
+      riskLabel.className = "risk-label";
+      riskLabel.textContent = alert.RISK ?? alert.risk
+        ? `Risk: ${displayValue(alert.RISK ?? alert.risk)}`
+        : "Alert";
+
+      const toggleButton = document.createElement("button");
+      toggleButton.className = "toggle-button";
+      toggleButton.type = "button";
+      toggleButton.textContent = "Show message only";
+      toggleButton.setAttribute("aria-expanded", "true");
+
+      const fields = document.createElement("dl");
+      fields.className = "alert-fields";
+
+      heading.append(riskLabel, toggleButton);
+      entry.append(heading, fields);
+      entry.alertData = alert;
+      toggleButton.addEventListener("click", () => {
+        const expanded = entry.dataset.expanded !== "true";
+        entry.dataset.expanded = String(expanded);
+        toggleButton.textContent = expanded ? "Show message only" : "Show all fields";
+        toggleButton.setAttribute("aria-expanded", String(expanded));
+        renderFields(entry);
+      });
+
+      alertList.prepend(entry);
+      emptyState.hidden = true;
+      renderFields(entry);
+    }
+
+    function renderFields(entry) {
+      const fields = entry.querySelector(".alert-fields");
+      const data = entry.alertData;
+      fields.replaceChildren();
+
+      const entries = entry.dataset.expanded === "true"
+        ? Object.entries(data)
+        : [["message", data.message ?? data.trigger ?? ""]];
+
+      for (const [name, value] of entries) {
+        const row = document.createElement("div");
+        row.className = "alert-field";
+        const label = document.createElement("dt");
+        label.textContent = `${name}:`;
+        const content = document.createElement("dd");
+        content.textContent = displayValue(value);
+        row.append(label, content);
+        fields.append(row);
+      }
+    }
+
+    window.addAlert = addAlert;
+    window.addEventListener("alert", event => addAlert(event.detail));
+
+    function setConnectionStatus(message) {
+      connectionStatus.textContent = message;
+    }
+
+    function loadPusherLibrary() {
+      if (window.Pusher) return Promise.resolve(window.Pusher);
+
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://js.pusher.com/8.4.0/pusher.min.js";
+        script.onload = () => {
+          if (window.Pusher) {
+            resolve(window.Pusher);
+          } else {
+            reject(new Error("Pusher library did not initialize."));
+          }
+        };
+        script.onerror = () => reject(new Error("Unable to load Pusher library."));
+        document.head.append(script);
+      });
+    }
+
+    async function loadPusherKey() {
+      const response = await fetch("/alerts/config", { cache: "no-store" });
+      if (!response.ok) throw new Error(`Unable to load Pusher configuration (${response.status}).`);
+
+      const config = await response.json();
+      if (typeof config.pusherkey !== "string" || !config.pusherkey) {
+        throw new Error("The Pusher key is missing from server configuration.");
+      }
+      return config.pusherkey;
+    }
+
+    function parseObject(value, description) {
+      const parsed = typeof value === "string" ? JSON.parse(value) : value;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new TypeError(`${description} must be a JSON object.`);
+      }
+      return parsed;
+    }
+
+    function handlePusherEvent(event) {
+      console.log("Pusher event received:", event);
+      try {
+        const data = parseObject(event, "Pusher event data");
+        if (data.type !== "infer") return;
+
+        const alert = data.text === undefined
+          ? data
+          : parseObject(data.text, "Inference alert");
+
+        if (
+          Object.prototype.hasOwnProperty.call(data, "interrupted") ||
+          Object.prototype.hasOwnProperty.call(data, "stop_reason") ||
+          Object.prototype.hasOwnProperty.call(alert, "interrupted") ||
+          Object.prototype.hasOwnProperty.call(alert, "stop_reason")
+        ) {
+          return;
+        }
+
+        addAlert(alert);
+      } catch (error) {
+        console.error("Unable to process Pusher alert:", error);
+      }
+    }
+
+    async function connectPusher() {
+      try {
+        const [Pusher, key] = await Promise.all([loadPusherLibrary(), loadPusherKey()]);
+        const pusher = new Pusher(key, { cluster: "us3", forceTLS: true });
+        pusher.connection.bind("connected", () => setConnectionStatus("Connected to receive alerts"));
+        pusher.connection.bind("error", error => {
+          console.error("Pusher connection error:", error);
+          setConnectionStatus("Pusher connection error");
+        });
+        pusher.subscribe("vault-vcc").bind("infer", handlePusherEvent);
+      } catch (error) {
+        console.error("Unable to connect alert page to Pusher:", error);
+        setConnectionStatus("Pusher connection failed");
+      }
+    }
+
+    clearButton.addEventListener("click", () => {
+      alertList.querySelectorAll(".alert").forEach(entry => entry.remove());
+      emptyState.hidden = false;
+    });
+
+    showPhoneFromUrl();
+    connectPusher();
+  </script>
+</body>
+
+</html>
