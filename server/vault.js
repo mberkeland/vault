@@ -78,6 +78,12 @@ app.use(function (req, res, next) {
 app.get("/_/health", async (req, res) => {
   res.sendStatus(200);
 });
+app.get("/alerts/config", async (req, res) => {
+  if (!pkey) {
+    return res.status(503).json({ error: "Pusher key is not initialized." });
+  }
+  return res.json({ pusherkey: pkey });
+});
 app.get("/keepalive", (req, res) => {
   //console.log("Keepalive: " + req.query);
   res.sendStatus(200);
@@ -764,7 +770,7 @@ app.post("/transfer", async (req, res) => {
         uri: '' + to, //"sip:19174634229@vcc-us.api.vonage.com",
         headers: headers
       };
-      from = req.body.phone;
+      //from = req.body.phone;
     } else {
       dest = {
         type: 'phone',
@@ -776,7 +782,9 @@ app.post("/transfer", async (req, res) => {
       to: [dest],
       from: {
         type: 'phone',
-        number: users[vid].from,
+        number: req.body.phone !== undefined && req.body.phone !== null
+          ? String(req.body.phone).replace(/\D/g, '')
+          : users[vid].from,
       },
     };
     console.log("Connection obj: ", obj)
@@ -936,13 +944,16 @@ app.post("/infer", async (req, res) => {
         await vcrstate.set(triggerStateKey, obj.trigger);
         vcrstate.expire(triggerStateKey, 300);
       }
-      
+
+      obj.timestamp = new Date().toLocaleString();
       req.body.text = JSON.stringify(obj);
+      req.body.type = 'infer';
       console.log("Normalized inference text: ", req.body.text);
-      pusher.trigger('nova', "event", req.body);
+      await pusher.trigger('nova', "event", req.body);
       if (deviceId && obj) {
         obj.type='infer';
-        pusher.trigger('vault-' + deviceId, "infer", obj);
+        await pusher.trigger('vault-' + deviceId, "infer", obj);
+        await pusher.trigger('vault-vcc', "infer", obj);
       }
     }
   }
